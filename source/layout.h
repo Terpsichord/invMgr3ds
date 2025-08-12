@@ -11,6 +11,15 @@
 #define TAG_WIDTH        100.0f
 #define TAG_SPACING      5.0f
 
+#define GRID_COLUMNS     5
+#define GRID_HPAD        10.0f
+#define GRID_VPAD        7.0f
+#define GRID_PAD         5.0f
+#define GRID_SPACING     (((TOP_WIDTH) - 2 * (GRID_HPAD) + GRID_PAD) / (GRID_COLUMNS))
+#define GRID_BORDER      3.0f
+#define GRID_TILE_SIZE   ((GRID_SPACING) - (GRID_PAD))
+#define GRID_QTY_X       ((GRID_HPAD) + (GRID_BORDER))
+#define GRID_QTY_Y       ((GRID_VPAD) + (GRID_TILE_SIZE) - (GRID_BORDER) - 12.0f)
 
 #define VIEW_TOP_PAD     30.0f
 #define VIEW_HPAD        10.0f

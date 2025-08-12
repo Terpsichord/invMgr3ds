@@ -55,6 +55,11 @@ typedef enum {
     SCREEN_DELETE_FOLDER,
 } Screen;
 
+typedef enum {
+    DISPLAY_LIST,
+    DISPLAY_GRID,
+} DisplayMode;
+
 typedef struct {
     int incrFrames;
     int decrFrames;
@@ -62,4 +67,5 @@ typedef struct {
     bool filters[MAX_FILTERS];
 } ButtonPresses;
 
-void updateUi(Screen *screen, TouchState *touchState, Inventory *inv, FolderView *view, Scroll *scroll, ButtonPresses *presses, Scroll *filterScroll);
+void updateUi(Screen *screen, DisplayMode *display, TouchState *touchState, Inventory *inv, FolderView *view,
+              Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses, Scroll *filterScroll);

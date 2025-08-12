@@ -30,10 +30,13 @@ int main() {
     loadInventory(&inv, &folderView);
 
     Screen screen = SCREEN_FOLDER;
+    DisplayMode display = DISPLAY_LIST;
 
     TouchState touchState;
     ButtonPresses presses = {0, 0, 0, {0}};
-    Scroll scroll = {0.0f, 0.0f}, filterScroll = {0.0f, 0.0f};
+    Scroll listScroll = {0.0f, 0.0f},
+           filterScroll = {0.0f, 0.0f},
+           gridScroll = {0.0f, 0.0f};
 
     while (aptMainLoop()) {
         hidScanInput();
@@ -41,8 +44,8 @@ int main() {
 
         if (kDown & KEY_START) break;
 
-        updateUi(&screen, &touchState, &inv, &folderView, &scroll, &presses, &filterScroll);
-        render(top, bottom, &inv, screen, scroll, &touchState, &presses, filterScroll, &folderView);
+        updateUi(&screen, &display, &touchState, &inv, &folderView, &listScroll, &gridScroll, &presses, &filterScroll);
+        render(top, bottom, &inv, screen, display, listScroll, gridScroll, &touchState, &presses, filterScroll, &folderView);
     }
 
     saveInventory(&inv);

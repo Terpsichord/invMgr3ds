@@ -258,6 +258,59 @@ void drawItemList(const Inventory *inv, const FolderView *view, float scrollOffs
     }
 }
 
+void drawGrid(const Inventory *inv, const FolderView *view, float scrollOffset) {
+    if (numShownItems(inv) == 0) return;
+
+    for (int i = 0; i < (numShownItems(inv) + GRID_COLUMNS - 1) / GRID_COLUMNS; i++) {
+        for (int j = 0; j < GRID_COLUMNS; j++) {
+            int idx = i * GRID_COLUMNS + j;
+            if (idx >= numShownItems(inv) ||
+                GRID_VPAD + GRID_SPACING * i - scrollOffset > SCREEN_HEIGHT ||
+                GRID_VPAD + GRID_SPACING * (i + 1) - scrollOffset < 0)
+                continue;
+
+            C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j, GRID_VPAD + GRID_SPACING * i - scrollOffset, 0.0f,
+                              GRID_TILE_SIZE, GRID_TILE_SIZE, accent);
+
+            if (true) { // todo: if has no image
+                float width, height, scale;
+                C2D_TextGetDimensions(&getItem(inv, idx)->nameText, 1.0f, 1.0f, &width, &height);
+                scale = (GRID_TILE_SIZE - 2 * GRID_BORDER - 2 * TEXT_HPAD) / width;
+                scale = MIN(scale, 0.7f);
+
+                C2D_DrawText(&getItem(inv, idx)->nameText, C2D_WithColor | C2D_AlignCenter,
+                             GRID_HPAD + GRID_SPACING * j + GRID_TILE_SIZE / 2,
+                             GRID_VPAD + GRID_SPACING * i - scrollOffset + GRID_TILE_SIZE / 2 - height * scale / 2,
+                             0.0f, scale, scale, darkAccent);
+
+            }
+
+
+            C2D_DrawText(&getItem(inv, idx)->qtyText, C2D_WithColor, GRID_QTY_X + GRID_SPACING * j,
+                         GRID_QTY_Y + GRID_SPACING * i - scrollOffset, 0.0f, 0.45f, 0.45f, white);
+
+            if (inv->selectedIdx == idx) {
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset, 0.0f,
+                                  GRID_TILE_SIZE, GRID_BORDER,
+                                  darkAccent);
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset,
+                                  0.0f, GRID_BORDER,
+                                  GRID_TILE_SIZE, darkAccent);
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j + GRID_TILE_SIZE - GRID_BORDER,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset,
+                                  0.0f, GRID_BORDER,
+                                  GRID_TILE_SIZE, darkAccent);
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset + GRID_TILE_SIZE - GRID_BORDER,
+                                  0.0f, GRID_TILE_SIZE,
+                                  GRID_BORDER, darkAccent);
+            }
+        }
+    }
+}
+
 static void drawQuantity(const Item *item, const TouchState *touchState) {
     C2D_DrawText(&qtyText, 0, QTY_X, QTY_LABEL_Y, 0.0f, 0.5f, 0.5f);
 
@@ -397,8 +450,10 @@ void drawFilterView(const Inventory *inv, const bool pressedFilters[], float scr
         if (i > inv->numTags) {
             float width, height;
             C2D_TextGetDimensions(getFilterText(inv, i), 0.5f, 0.5f, &width, &height);
-            C2D_DrawRectSolid(BOX_X + BOX_SIZE + FILTER_HPAD, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD / 2 - scroll, 0.0f,
-                              width + hashWidth + 2 * FILTER_HPAD, height + TEXT_VPAD, inv->folders[i - inv->numTags - 1]->color);
+            C2D_DrawRectSolid(BOX_X + BOX_SIZE + FILTER_HPAD,
+                              BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD / 2 - scroll, 0.0f,
+                              width + hashWidth + 2 * FILTER_HPAD, height + TEXT_VPAD,
+                              inv->folders[i - inv->numTags - 1]->color);
             C2D_DrawText(&hashText, 0, x, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll, 0.0f, 0.5f, 0.5f);
             x += hashWidth;
         }
@@ -554,7 +609,7 @@ void drawFilterBar(const Inventory *inv, Screen screen) {
 
 // -----------------------------------------------------------------------------
 
-void drawFolderList(const FolderView *view, float scrollOffset) {
+void drawFolderList(const FolderView *view/*, float scrollOffset*/) {
     if (isFolderEmpty(view)) {
         C2D_DrawText(&emptyText, 0, TEXT_HPAD, INV_TOP_PAD + TEXT_VPAD, 0.0f, 0.6f, 0.6f);
         if (isEmptyRoot(view)) {
@@ -694,22 +749,7 @@ void drawEmptyFolderButtons(const TouchState *touchState) {
                  0.0f, 0.5f, 0.5f, pressed ? white : black);
 }
 
-void drawScrollBar(Scroll scroll, gfxScreen_t screen, bool filterBar) {
-    float width, maxHeight, heightPortion, x, y;
-    if (screen == GFX_TOP) {
-        width = TOP_WIDTH;
-        maxHeight = SCREEN_HEIGHT - INV_TOP_PAD - 2 * TEXT_VPAD - filterBar * BAR_HEIGHT;
-        heightPortion = SCREEN_HEIGHT - filterBar * BAR_HEIGHT;
-        x = 0.0f;
-        y = INV_TOP_PAD;
-    } else {
-        width = BOX_AREA_WIDTH - BORDER;
-        maxHeight = BOX_AREA_HEIGHT - 0.6 * 30.0f - 2 * TEXT_VPAD;
-        heightPortion = BOX_AREA_HEIGHT;
-        x = BOX_AREA_X;
-        y = VIEW_TOP_PAD + 0.6 * 30.0f + 2 * TEXT_VPAD;
-    }
-
+void drawScrollBar(Scroll scroll, float width, float maxHeight, float heightPortion, float x, float y) {
     float height = heightPortion / (scroll.max + heightPortion) * maxHeight;
     float offset = y + scroll.offset / scroll.max * (maxHeight - height);
 
@@ -719,20 +759,29 @@ void drawScrollBar(Scroll scroll, gfxScreen_t screen, bool filterBar) {
 // -----------------------------------------------------------------------------
 
 static void
-drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Scroll scroll, const FolderView *view) {
+drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, DisplayMode display, Scroll listScroll,
+              Scroll gridScroll, const FolderView *view) {
 #ifndef CONSOLE_TOP
     C2D_TargetClear(top, bgColor);
 
     C2D_SceneBegin(top);
     {
         if (screen == SCREEN_FOLDER || screen == SCREEN_DELETE_FOLDER) {
-            drawFolderList(view, scroll.offset);
+            drawFolderList(view/*, scroll.offset*/);
         } else {
-            drawItemList(inv, view, scroll.offset);
-            drawHeaders(bgColor);
-
-            if (scroll.max > 0.0f) {
-                drawScrollBar(scroll, GFX_TOP, showFilterBar(inv, screen));
+            if (display == DISPLAY_LIST) {
+                drawItemList(inv, view, listScroll.offset);
+                drawHeaders(bgColor);
+                if (listScroll.max > 0) {
+                    drawScrollBar(listScroll, TOP_WIDTH,
+                                  SCREEN_HEIGHT - INV_TOP_PAD - 2 * TEXT_VPAD - showFilterBar(inv, screen) * BAR_HEIGHT,
+                                  SCREEN_HEIGHT - INV_TOP_PAD - showFilterBar(inv, screen) * BAR_HEIGHT, 0.0f, INV_TOP_PAD + TEXT_VPAD);
+                }
+            } else {
+                drawGrid(inv, view, gridScroll.offset);
+                if (gridScroll.max > 0) {
+                    drawScrollBar(gridScroll, TOP_WIDTH, SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD, SCREEN_HEIGHT - GRID_VPAD, 0.0f, GRID_VPAD);
+                }
             }
         }
 
@@ -771,7 +820,8 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
                 drawSortView(inv);
                 drawFilterView(inv, presses->filters, filterScroll.offset);
                 if (filterScroll.max > 0.0f) {
-                    drawScrollBar(filterScroll, GFX_BOTTOM, false);
+                    drawScrollBar(filterScroll, BOX_AREA_WIDTH - BORDER, BOX_AREA_HEIGHT - 0.6 * 30.0f - 2 * TEXT_VPAD,
+                                  BOX_AREA_HEIGHT, BOX_AREA_X, VIEW_TOP_PAD + 0.6 * 30.0f + 2 * TEXT_VPAD);
                 }
                 drawSearchBar(inv);
                 break;
@@ -815,14 +865,16 @@ void updateColors(void) {
 }
 
 void
-render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, Scroll scroll,
-       const TouchState *touchState, const ButtonPresses *presses, Scroll filterScroll, const FolderView *folderView) {
+render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, DisplayMode display,
+       Scroll listScroll,
+       Scroll gridScroll, const TouchState *touchState, const ButtonPresses *presses, Scroll filterScroll,
+       const FolderView *folderView) {
     bgColor = folderView->currentFolder->color;
     updateColors();
 
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
-    drawTopScreen(top, inv, screen, scroll, folderView);
+    drawTopScreen(top, inv, screen, display, listScroll, gridScroll, folderView);
     drawBottomScreen(bottom, inv, screen, touchState, filterScroll, presses, folderView);
 
     C3D_FrameEnd(0);

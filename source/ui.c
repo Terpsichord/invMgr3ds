@@ -259,6 +259,7 @@ void updateUiTouch(TouchState *state, Screen *screen, Inventory *inv, FolderView
         SwkbdState swkbd;
         swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, MAX_ITEM_LEN - 1);
         swkbdSetHintText(&swkbd, "Enter item description (enter tags as \"#tag1 #tag2\")");
+        swkbdSetFeatures(&swkbd, SWKBD_MULTILINE);
         swkbdSetInitialText(&swkbd, getSelectedItem(inv)->desc);
 
         SwkbdButton button = swkbdInputText(&swkbd, descBuf, MAX_ITEM_LEN);
@@ -371,6 +372,7 @@ static SwkbdButton addItem(Inventory *inv, Folder *folder) {
         SwkbdState descKb;
         swkbdInit(&descKb, SWKBD_TYPE_NORMAL, 2, MAX_ITEM_LEN - 1);
         swkbdSetHintText(&descKb, "Enter item description (enter tags as \"#tag1 #tag2\")");
+        swkbdSetFeatures(&descKb, SWKBD_MULTILINE);
         swkbdInputText(&descKb, descBuf, MAX_ITEM_LEN);
     }
 
@@ -413,26 +415,70 @@ void editItem(FolderView *view, Inventory *inv, Screen *screen, Item *item) {
     *screen = SCREEN_EDIT;
 }
 
+static void updateListScroll(Scroll *listScroll, Inventory *inv, Screen screen) {
+    listScroll->offset = MIN(listScroll->offset, ITEM_HEIGHT * inv->selectedIdx);
+    listScroll->offset = MAX(listScroll->offset,
+                             ITEM_HEIGHT * (inv->selectedIdx + 1) - SCREEN_HEIGHT + INV_TOP_PAD +
+                             showFilterBar(inv, screen) * BAR_HEIGHT);
+}
 
-void updateUiButtons(Screen *screen, Inventory *inv, FolderView *view, Scroll *scroll, ButtonPresses *presses) {
+static void updateGridScroll(Scroll *gridScroll, Inventory *inv) {
+    int row = inv->selectedIdx / GRID_COLUMNS;
+    gridScroll->offset = MIN(gridScroll->offset, GRID_SPACING * row);
+    gridScroll->offset = MAX(gridScroll->offset,
+                             GRID_SPACING * (row + 1) - SCREEN_HEIGHT + GRID_VPAD);
+}
+
+void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, FolderView *view, Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses) {
     u32 kDown = hidKeysDown();
     u32 kHeld = hidKeysHeld();
 
     if (*screen == SCREEN_VIEW || *screen == SCREEN_FILTER_FOLDER) {
         if (numShownItems(inv) > 0) {
-            if (kDown & KEY_DDOWN) {
-                inv->selectedIdx = (inv->selectedIdx + 1) % numShownItems(inv);
-            }
-            if (kDown & KEY_DUP) {
-                inv->selectedIdx = (inv->selectedIdx + numShownItems(inv) - 1) % numShownItems(inv);
+            if (*display == DISPLAY_LIST) {
+                if (kDown & KEY_DDOWN) {
+                    inv->selectedIdx = (inv->selectedIdx + 1) % numShownItems(inv);
+                }
+                if (kDown & KEY_DUP) {
+                    inv->selectedIdx = (inv->selectedIdx + numShownItems(inv) - 1) % numShownItems(inv);
+                }
+
+                if (kDown & (KEY_DUP | KEY_DDOWN)) {
+                    updateListScroll(listScroll, inv, *screen);
+                }
+            } else if (*display == DISPLAY_GRID) {
+                if (kDown & KEY_DRIGHT) {
+                    inv->selectedIdx = (inv->selectedIdx + 1) % numShownItems(inv);
+                }
+                if (kDown & KEY_DLEFT) {
+                    inv->selectedIdx = (inv->selectedIdx + numShownItems(inv) - 1) % numShownItems(inv);
+                }
+
+                int numRows = (numShownItems(inv) + GRID_COLUMNS - 1) / GRID_COLUMNS;
+                int row = inv->selectedIdx / GRID_COLUMNS, col = inv->selectedIdx % GRID_COLUMNS;
+
+                if (kDown & KEY_DDOWN) {
+                    if (row < numRows - 2) {
+                        inv->selectedIdx += GRID_COLUMNS;
+                    } else if (row == numRows - 2) {
+                        inv->selectedIdx = MIN(inv->selectedIdx + GRID_COLUMNS, numShownItems(inv) - 1);
+                    } else {
+                        inv->selectedIdx = col;
+                    }
+                }
+                if (kDown & KEY_DUP) {
+                    if (row > 0) {
+                        inv->selectedIdx -= GRID_COLUMNS;
+                    } else {
+                        inv->selectedIdx = MIN((numRows - 1) * GRID_COLUMNS + col, numShownItems(inv) - 1);
+                    }
+                }
+
+                if (kDown & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN)) {
+                    updateGridScroll(gridScroll, inv);
+                }
             }
 
-            if (kDown & (KEY_DUP | KEY_DDOWN)) {
-                scroll->offset = MIN(scroll->offset, ITEM_HEIGHT * inv->selectedIdx);
-                scroll->offset = MAX(scroll->offset,
-                                     ITEM_HEIGHT * (inv->selectedIdx + 1) - SCREEN_HEIGHT + INV_TOP_PAD +
-                                     showFilterBar(inv, *screen) * BAR_HEIGHT);
-            }
 
             if (*screen == SCREEN_VIEW && kDown & KEY_A) {
                 *screen = SCREEN_EDIT;
@@ -509,10 +555,11 @@ void updateUiButtons(Screen *screen, Inventory *inv, FolderView *view, Scroll *s
                     (view->selectedIdx + view->currentFolder->numChildren - 1) % view->currentFolder->numChildren;
         }
 
-        if (kDown & (KEY_DUP | KEY_DDOWN)) {
-            scroll->offset = MIN(scroll->offset, FOLDER_SPACING * inv->selectedIdx);
-            scroll->offset = MAX(scroll->offset, FOLDER_SPACING * (inv->selectedIdx + 1) - SCREEN_HEIGHT + INV_TOP_PAD);
-        }
+        // todo: should probably add proper scrolling for folder view
+//        if (kDown & (KEY_DUP | KEY_DDOWN)) {
+//            listScroll->offset = MIN(listScroll->offset, FOLDER_SPACING * inv->selectedIdx);
+//            listScroll->offset = MAX(listScroll->offset, FOLDER_SPACING * (inv->selectedIdx + 1) - SCREEN_HEIGHT + INV_TOP_PAD);
+//        }
 
         if (kDown & KEY_A) {
             folderViewNavigateChild(view);
@@ -542,21 +589,37 @@ void updateUiButtons(Screen *screen, Inventory *inv, FolderView *view, Scroll *s
         }
     }
 
-    if ((*screen == SCREEN_VIEW || *screen == SCREEN_EDIT || *screen == SCREEN_FILTER ||
-         *screen == SCREEN_FILTER_FOLDER)
-        && kHeld & (KEY_CPAD_UP | KEY_CPAD_DOWN)) {
-        circlePosition circlePos;
-        hidCircleRead(&circlePos);
+    if (*screen == SCREEN_VIEW || *screen == SCREEN_EDIT || *screen == SCREEN_FILTER || *screen == SCREEN_FILTER_FOLDER) {
+        if (kHeld & (KEY_CPAD_UP | KEY_CPAD_DOWN)) {
+            circlePosition circlePos;
+            hidCircleRead(&circlePos);
 
-        scroll->offset -= circlePos.dy / 20.0f;
+
+            Scroll *scroll = *display == DISPLAY_LIST ? listScroll : gridScroll;
+            scroll->offset -= circlePos.dy / 20.0f;
+        }
+
+        if (kDown & KEY_SELECT) {
+            if (*display == DISPLAY_LIST) {
+                *display = DISPLAY_GRID;
+                updateGridScroll(gridScroll, inv);
+            } else {
+                *display = DISPLAY_LIST;
+                updateListScroll(listScroll, inv, *screen);
+            }
+        }
     }
 }
 
-void updateScroll(Scroll *scroll, Inventory *inv, Scroll *filterScroll) {
-    scroll->max = numShownItems(inv) * ITEM_HEIGHT - SCREEN_HEIGHT + INV_TOP_PAD +
+void updateScroll(Scroll *listScroll, Scroll *gridScroll, Inventory *inv, Scroll *filterScroll) {
+    listScroll->max = numShownItems(inv) * ITEM_HEIGHT - SCREEN_HEIGHT + INV_TOP_PAD +
                   showFilterBar(inv, SCREEN_VIEW) * BAR_HEIGHT;
-    scroll->offset = MIN(scroll->offset, scroll->max);
-    scroll->offset = MAX(0.0f, scroll->offset);
+    listScroll->offset = MIN(listScroll->offset, listScroll->max);
+    listScroll->offset = MAX(0.0f, listScroll->offset);
+
+    gridScroll->max = (numShownItems(inv) + GRID_COLUMNS - 1) / GRID_COLUMNS * GRID_SPACING - SCREEN_HEIGHT + GRID_VPAD;
+    gridScroll->offset = MIN(gridScroll->offset, gridScroll->max);
+    gridScroll->offset = MAX(0.0f, gridScroll->offset);
 
     filterScroll->max = (inventoryAvailableFilters(inv) + 1) * BOX_SPACING - BOX_AREA_HEIGHT;
     filterScroll->offset = MIN(filterScroll->offset, filterScroll->max);
@@ -564,10 +627,10 @@ void updateScroll(Scroll *scroll, Inventory *inv, Scroll *filterScroll) {
 
 }
 
-void updateUi(Screen *screen, TouchState *touchState, Inventory *inv, FolderView *view, Scroll *scroll,
-              ButtonPresses *presses, Scroll *filterScroll) {
+void updateUi(Screen *screen, DisplayMode *display, TouchState *touchState, Inventory *inv, FolderView *view,
+              Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses, Scroll *filterScroll) {
     updateTouchState(touchState, *screen, &filterScroll->offset, hasQuery(inv), isFolderEmpty(view));
     updateUiTouch(touchState, screen, inv, view, presses, &filterScroll->offset);
-    updateUiButtons(screen, inv, view, scroll, presses);
-    updateScroll(scroll, inv, filterScroll);
+    updateUiButtons(screen, display, inv, view, listScroll, gridScroll, presses);
+    updateScroll(listScroll, gridScroll, inv, filterScroll);
 }
