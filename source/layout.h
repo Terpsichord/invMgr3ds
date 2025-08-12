@@ -43,7 +43,8 @@
 
 #define ROW_BTN_Y        200.0f
 #define ROW_BTN_HEIGHT   25.0f
-#define ROW_BTN_WIDTH    (((BOTTOM_WIDTH) - 2.0f * (VIEW_HPAD) - 5.0f * (BORDER) - 4.0f * (TEXT_HPAD)) / 4.0f)
+#define NUM_ROW_BTNS     4
+#define ROW_BTN_WIDTH    (((BOTTOM_WIDTH) - 2.0f * (VIEW_HPAD) - ((NUM_ROW_BTNS) + 1) * (BORDER) - (NUM_ROW_BTNS) * (TEXT_HPAD)) / (NUM_ROW_BTNS))
 
 #define RENAME_X         ((VIEW_HPAD) + (BORDER) + 2.0f * (TEXT_HPAD))
 #define EDIT_TAGS_X      ((RENAME_X)    + (ROW_BTN_WIDTH) + (BORDER))
@@ -76,3 +77,12 @@
 #define BAR_HEIGHT       22.0f
 #define BAR_BORDER       1.0f
 #define BAR_X            ((TOP_WIDTH) - 80.0f)
+
+
+#define FOLDER_SPACING   (0.6f * 30.0f + 2 * (TEXT_VPAD))
+
+#define NUM_FOLDER_BTNS  3
+#define FOLDER_BTN_WIDTH (((BOTTOM_WIDTH) - 2.0f * (VIEW_HPAD) - ((NUM_FOLDER_BTNS) + 1) * (BORDER) - (NUM_FOLDER_BTNS) * (TEXT_HPAD)) / (NUM_FOLDER_BTNS))
+#define NEW_FOLDER_X     ((VIEW_HPAD) + (BORDER) + 2.0f * (TEXT_HPAD))
+#define RENAME_FOLDER_X  ((NEW_FOLDER_X) + (FOLDER_BTN_WIDTH) + (BORDER))
+#define DELETE_FOLDER_X  ((RENAME_FOLDER_X) + (FOLDER_BTN_WIDTH) + (BORDER))

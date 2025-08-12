@@ -1,16 +1,18 @@
+#pragma once
+
 #include "citro2d.h"
+
 #include "main.h"
+#include "folder.h"
 
 #define MAX_ITEMS       512
 #define MAX_ITEM_LEN    64
 #define MAX_ITEM_TAGS   8
 #define MAX_TAGS        32
-#define MAX_FILTERS     ((MAX_TAGS) + 1)
+#define MAX_FILTERS     ((MAX_TAGS) + (MAX_TOTAL_FOLDERS) + 1)
 #define MAX_TAG_LEN     32
 #define MAX_QUERY       32
 #define MAX_QUANTITY    999
-
-#define FILE_PATH       "sdmc:/3ds/invMgr3ds/"
 
 typedef struct {
     char name[MAX_ITEM_LEN];
@@ -25,6 +27,9 @@ typedef struct {
     char tags[MAX_ITEM_TAGS][MAX_TAG_LEN];
     C2D_Text tagsText[MAX_ITEM_TAGS];
     int numTags;
+
+    Folder *folders[MAX_FOLDERS];
+    int numFolders;
 } Item;
 
 typedef struct {
@@ -38,11 +43,17 @@ typedef struct {
     C2D_Text tagsText[MAX_TAGS];
     int numTags;
 
+    Folder *folders[MAX_TOTAL_FOLDERS];
+    int numFolders;
+
     int filters[MAX_FILTERS];
     int numFilters;
     SortOrder sortOrder;
     char searchQuery[MAX_QUERY];
     C2D_Text searchQueryText;
+
+    Folder *folderFilters[MAX_FOLDERS];
+    int numFolderFilters;
 
     int filteredIndices[MAX_ITEMS];
     int numFiltered;
@@ -59,14 +70,22 @@ void freeInventory(Inventory *inv);
 
 int numShownItems(const Inventory *inv);
 
-int addInventoryItem(Inventory *inv, const char *name, const char *desc, int quantity);
+int addInventoryItem(Inventory *inv, const char *name, const char *desc, int quantity, const Folder *folders[MAX_FOLDERS], int numFolders);
 void removeInventoryItem(Inventory *inv, int idx);
+
+int inventoryAddFolders(Inventory *inv, Folder *folders[MAX_FOLDERS], int numFolders);
 
 void inventorySearch(Inventory *inv, const char *query);
 bool hasQuery(const Inventory *inv);
+bool folderHasItems(const Inventory *inv, const Folder *folder);
+void deleteSelectedFolder(FolderView *view, Inventory *inv);
 bool isFiltered(const Inventory *inv);
 
+int getItemIdx(const Inventory *inv, int i);
+Item *getItem(const Inventory *inv, int i);
 Item *getSelectedItem(const Inventory *inv);
+
+int inventoryAvailableFilters(const Inventory *inv);
 
 void inventorySetQuantity(Inventory *inv, int quantity);
 void inventoryChangeQuantity(Inventory *inv, int change);
@@ -76,18 +95,10 @@ void inventorySetDesc(Inventory *inv, const char *desc);
 
 void refreshItemTags(Inventory *inv, Item *item);
 
+
 void updateFilteredIndices(Inventory *inv, bool pressedFilters[MAX_FILTERS]);
 void updateSortOrder(Inventory *inv, bool changedOrder);
 void addInventoryFilter(Inventory *inv, int filter);
-
-void drawItemList(const Inventory *inv, float scrollOffset);
-void drawItemView(const Inventory *inv, bool editing, const TouchState *touchState);
-void drawSortView(const Inventory *inv);
-void drawFilterView(const Inventory *inv, bool pressedFilters[], float scroll);
-void drawSearchBar(const Inventory *inv);
-void drawFiltering(const Inventory *inv);
+void inventorySetFolderFilter(Inventory *inv, Folder *folder);
 
 SwkbdCallbackResult validateTagInput(void *user, const char **message, const char *text, size_t textLen);
-
-void loadInventory(Inventory *inv);
-void saveInventory(const Inventory *inv);

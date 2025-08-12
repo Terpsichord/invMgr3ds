@@ -1,12 +1,12 @@
 BasicInfo:
   Title: "invMgr3ds"
-  ProductCode: $(PRODUCT_CODE)
+  ProductCode: "CTR-INVMGR"
   CompanyCode: "00"
   Logo: Homebrew
 
 TitleInfo:
   Category: Application
-  UniqueId: $(UNIQUE_ID)
+  UniqueId: 0x46a23
 
 Option:
   UseOnSD                 : true # true if App is to be installed to SD

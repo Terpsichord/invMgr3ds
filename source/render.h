@@ -1,0 +1,13 @@
+#include "ui.h"
+
+extern C2D_Text qtyText, tagsText, outText, sortText, filterText, searchText, commaText, quotesText, sortTexts[NUM_SORTS];
+extern u32 white, lightGray, gray, darkGray, black, columnGray;
+
+void initRender(C3D_RenderTarget **top, C3D_RenderTarget **bottom);
+void cleanupRender(void);
+
+bool showFilterBar(const Inventory *inv, Screen screen);
+
+void
+render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, Scroll scroll,
+       const TouchState *touchState, const ButtonPresses *presses, Scroll filterScroll, const FolderView *folderView);
