@@ -6,6 +6,8 @@
 #include "inventory.h"
 #include "folder.h"
 
+#define FILTER_SCROLL_FRAMES 30
+
 typedef struct {
     float offset;
     float max;
@@ -25,6 +27,7 @@ typedef enum {
     TOUCH_SORT,
     TOUCH_FILTER,
     TOUCH_FILTER_BOX,
+    TOUCH_FILTER_TAG,
     TOUCH_SEARCH,
     TOUCH_SEARCH_CLEAR,
     TOUCH_COLOR,
@@ -81,6 +84,8 @@ typedef struct {
     int decrFrames;
     bool filterHeld;
     bool colorHeld;
+    int heldFilterTag;
+    int tagHeldFrames;
     bool filters[MAX_FILTERS];
 } ButtonPresses;
 

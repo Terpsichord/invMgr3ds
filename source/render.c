@@ -374,6 +374,8 @@ static void drawSelected(const Item *item, bool editing, const TouchState *touch
 }
 
 void drawSortView(const Inventory *inv) {
+    C2D_DrawRectSolid(0.0f, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BOX_AREA_X, SORT_HEIGHT, bgColor);
+
     C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, SORT_WIDTH, SORT_HEIGHT, accent);
     C2D_DrawRectSolid(VIEW_HPAD + BORDER, VIEW_TOP_PAD + VIEW_VPAD + BORDER, 0.0f, SORT_WIDTH - 2 * BORDER,
                       SORT_HEIGHT - 2 * BORDER, bgColor);
@@ -403,11 +405,7 @@ const C2D_Text *getFilterText(const Inventory *inv, int filter) {
     }
 }
 
-void drawFilterView(const Inventory *inv, const bool pressedFilters[], float scroll) {
-    C2D_DrawRectSolid(BOX_AREA_X, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BOX_AREA_WIDTH, BOX_AREA_HEIGHT, accent);
-    C2D_DrawRectSolid(BOX_AREA_X + BORDER, VIEW_TOP_PAD + VIEW_VPAD + BORDER, 0.0f, BOX_AREA_WIDTH - 2 * BORDER,
-                      BOX_AREA_HEIGHT - 2 * BORDER, bgColor);
-
+void drawFilterView(const Inventory *inv, ButtonPresses *presses, float scroll) {
     float hashWidth;
     C2D_TextGetDimensions(&hashText, 0.5f, 0.5f, &hashWidth, NULL);
 
@@ -415,20 +413,28 @@ void drawFilterView(const Inventory *inv, const bool pressedFilters[], float scr
         if (BOX_SPACING * (i + 1) - VIEW_VPAD - scroll + 2 * FILTER_VPAD < 0 ||
             BOX_SPACING * i - scroll > BOX_AREA_HEIGHT - VIEW_VPAD - 2 * FILTER_VPAD - BORDER)
             continue;
-        C2D_DrawRectSolid(BOX_X, BOX_Y + BOX_SPACING * i - scroll, 0.0f, BOX_SIZE, BOX_SIZE, black);
-
-        if (!pressedFilters[i]) {
-            C2D_DrawRectSolid(BOX_X + 1, BOX_Y + BOX_SPACING * i + 1 - scroll, 0.0f, BOX_SIZE - 2, BOX_SIZE - 2,
-                              bgColor);
-        }
 
         float x = BOX_X + BOX_SIZE + 2 * FILTER_HPAD;
+
+        float tagBgHeight = 30.0f * 0.5f + TEXT_VPAD, width;
+        C2D_TextGetDimensions(getFilterText(inv, i), 0.5f, 0.5f, &width, NULL);
+        width += hashWidth * (i > inv->numTags);
+
+        float tagScroll = 0.0f;
+        if (presses->heldFilterTag == i) {
+            if (width > BOX_AREA_WIDTH - 2 * BORDER - 2 * FILTER_HPAD - BOX_SIZE - 2 * FILTER_HPAD) {
+                tagScroll = MAX(presses->tagHeldFrames - FILTER_SCROLL_FRAMES, 0);
+                if (tagScroll > width + FILTER_HPAD) {
+                    presses->tagHeldFrames -= width + FILTER_HPAD + FILTER_SCROLL_FRAMES;
+                }
+                x -= tagScroll;
+            }
+        }
+
         if (i > inv->numTags) {
-            float width, height;
-            C2D_TextGetDimensions(getFilterText(inv, i), 0.5f, 0.5f, &width, &height);
             C2D_DrawRectSolid(BOX_X + BOX_SIZE + FILTER_HPAD,
                               BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD / 2 - scroll, 0.0f,
-                              width + hashWidth + 2 * FILTER_HPAD, height + TEXT_VPAD,
+                              width + 2 * FILTER_HPAD, tagBgHeight,
                               inv->folders[i - inv->numTags - 1]->color);
             C2D_DrawText(&hashText, 0, x, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll, 0.0f, 0.5f, 0.5f);
             x += hashWidth;
@@ -436,7 +442,20 @@ void drawFilterView(const Inventory *inv, const bool pressedFilters[], float scr
 
         C2D_DrawText(getFilterText(inv, i), 0, x, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll,
                      0.0f, 0.5f, 0.5f);
+        if (tagScroll > 0.0f) {
+            C2D_DrawText(getFilterText(inv, i), 0, x + width + 2 * FILTER_HPAD, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll,
+                         0.0f, 0.5f, 0.5f);
+        }
+
+        C2D_DrawRectSolid(BOX_X - FILTER_HPAD, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD / 2 - scroll, 0.0f, BOX_SIZE + 2 * FILTER_HPAD, tagBgHeight, white);
+        C2D_DrawRectSolid(BOX_X, BOX_Y + BOX_SPACING * i - scroll, 0.0f, BOX_SIZE, BOX_SIZE, black);
+        if (!presses->filters[i]) {
+            C2D_DrawRectSolid(BOX_X + 1, BOX_Y + BOX_SPACING * i + 1 - scroll, 0.0f, BOX_SIZE - 2, BOX_SIZE - 2,
+                              bgColor);
+        }
     }
+
+    C2D_DrawRectSolid(BOX_AREA_X, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BOX_AREA_WIDTH, BORDER, accent);
 
     float w, h;
     C2D_TextGetDimensions(&filterText, 0.6f, 0.6f, &w, &h);
@@ -444,10 +463,16 @@ void drawFilterView(const Inventory *inv, const bool pressedFilters[], float scr
                       bgColor);
     C2D_DrawText(&filterText, 0, BOX_AREA_X + BORDER + 2 * TEXT_HPAD, VIEW_TOP_PAD, 0.0f, 0.6f, 0.6f);
 
+    // covers
     C2D_DrawRectSolid(BOX_AREA_X + BORDER + 3 * TEXT_HPAD + w, VIEW_TOP_PAD + VIEW_VPAD, 0.0f,
                       BOX_AREA_WIDTH - BORDER - 3 * TEXT_HPAD - w, BORDER, accent);
     C2D_DrawRectSolid(BOX_AREA_X + BORDER + 3 * TEXT_HPAD + w, VIEW_TOP_PAD + VIEW_VPAD + BORDER, 0.0f,
                       BOX_AREA_WIDTH - 2 * BORDER - 3 * TEXT_HPAD - w, h + 2 * TEXT_VPAD - VIEW_VPAD - BORDER, bgColor);
+
+    C2D_DrawRectSolid(BOX_AREA_X, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BORDER, BOX_AREA_HEIGHT, accent);
+    C2D_DrawRectSolid(BOX_AREA_X + BOX_AREA_WIDTH - BORDER, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BORDER, BOX_AREA_HEIGHT,
+                      accent);
+    C2D_DrawRectSolid(BOX_AREA_X + BOX_AREA_WIDTH, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BOTTOM_WIDTH, SCREEN_HEIGHT, bgColor);
     C2D_DrawRectSolid(BOX_AREA_X, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT - BORDER, 0.0f, BOX_AREA_WIDTH, BORDER,
                       accent);
     C2D_DrawRectSolid(BOX_AREA_X, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT, 0.0f, BOX_AREA_WIDTH, SCREEN_HEIGHT,
@@ -976,7 +1001,7 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
 
 void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, DisplayMode display,
                       bool optionScreen, const TouchState *touchState, Scroll filterScroll,
-                      const ButtonPresses *presses, const FolderView *view) {
+                      ButtonPresses *presses, const FolderView *view) {
 #ifndef CONSOLE
     C2D_TargetClear(bottom, bgColor);
 
@@ -1002,8 +1027,8 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
                 break;
             case SCREEN_FILTER:
             case SCREEN_FILTER_FOLDER:
+                drawFilterView(inv, presses, filterScroll.offset);
                 drawSortView(inv);
-                drawFilterView(inv, presses->filters, filterScroll.offset);
                 if (filterScroll.max > 0.0f) {
                     drawScrollBar(filterScroll, BOX_AREA_WIDTH - BORDER, BOX_AREA_HEIGHT - 0.6 * 30.0f - 2 * TEXT_VPAD,
                                   BOX_AREA_HEIGHT, BOX_AREA_X, VIEW_TOP_PAD + 0.6 * 30.0f + 2 * TEXT_VPAD);
@@ -1061,7 +1086,7 @@ void updateColors(void) {
 void
 render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, DisplayMode display,
        bool optionScreen, Scroll listScroll,
-       Scroll gridScroll, const TouchState *touchState, const ButtonPresses *presses, Scroll filterScroll,
+       Scroll gridScroll, const TouchState *touchState, ButtonPresses *presses, Scroll filterScroll,
        const FolderView *folderView) {
     bgColor = folderView->currentFolder->color;
     updateColors();

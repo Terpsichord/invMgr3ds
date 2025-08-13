@@ -4,7 +4,8 @@
 #include "layout.h"
 #include "render.h"
 
-void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float *filterScroll, bool hasQuery, bool folderEmpty) {
+void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float *filterScroll, bool hasQuery,
+                      bool folderEmpty) {
     u32 kDown = hidKeysDown();
     u32 kHeld = hidKeysHeld();
     u32 KUp = hidKeysUp();
@@ -69,22 +70,21 @@ void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float
                 }
             }
         } else if (screen == SCREEN_FILTER || screen == SCREEN_FILTER_FOLDER) {
-            bool touchFilter = false;
-            if (touchPos.px >= BOX_X && touchPos.px < BOX_X + BOX_SIZE) {
-                if (touchPos.py >= BOX_Y && touchPos.py < BOX_Y + BOX_AREA_HEIGHT) {
-                    if (fmodf(touchPos.py - BOX_Y + *filterScroll, BOX_SPACING) <= BOX_SIZE) {
-                        touchFilter = true;
-                        state->item = TOUCH_FILTER;
-                        state->itemIdx = (touchPos.py - BOX_Y + *filterScroll) / BOX_SPACING;
-                    }
-                }
-            }
-
             if (touchPos.px >= BOX_AREA_X && touchPos.px < BOX_AREA_X + BOX_AREA_WIDTH) {
                 if (touchPos.py >= VIEW_TOP_PAD + VIEW_VPAD &&
                     touchPos.py < VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT) {
-                    if (!touchFilter) {
-                        state->item = TOUCH_FILTER_BOX;
+                    state->item = TOUCH_FILTER_BOX;
+                }
+            }
+
+            if (touchPos.py >= BOX_Y && touchPos.py < BOX_Y + BOX_AREA_HEIGHT) {
+                if (fmodf(touchPos.py - BOX_Y + *filterScroll, BOX_SPACING) <= BOX_SIZE) {
+                    if (touchPos.px >= BOX_X && touchPos.px < BOX_X + BOX_SIZE) {
+                        state->item = TOUCH_FILTER;
+                        state->itemIdx = (touchPos.py - BOX_Y + *filterScroll) / BOX_SPACING;
+                    } else if (touchPos.px >= BOX_X + BOX_SIZE + FILTER_HPAD && touchPos.px < BOX_X + BOX_AREA_WIDTH - BORDER) {
+                        state->item = TOUCH_FILTER_TAG;
+                        state->itemIdx = (touchPos.py - BOX_Y + *filterScroll) / BOX_SPACING;
                     }
                 }
             }
@@ -138,7 +138,8 @@ void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float
                     state->color.saturation = (touchPos.px - COLOR_X) / COLOR_SIZE;
                     state->color.value = 1.0f - (touchPos.py - COLOR_Y) / COLOR_SIZE;
                     state->item = TOUCH_COLOR;
-                } else if (touchPos.px >= COLOR_X + COLOR_SIZE + COLOR_PAD && touchPos.px < COLOR_X + COLOR_SIZE + COLOR_PAD + COLOR_BAR_WIDTH) {
+                } else if (touchPos.px >= COLOR_X + COLOR_SIZE + COLOR_PAD &&
+                           touchPos.px < COLOR_X + COLOR_SIZE + COLOR_PAD + COLOR_BAR_WIDTH) {
                     state->color.hue = (touchPos.py - COLOR_Y) * 360.0f / COLOR_SIZE;
                 }
             }
@@ -175,13 +176,14 @@ static void normalizeSpaces(char *str) {
     str[write] = '\0';
 }
 
-void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool *optionScreen, Inventory *inv, FolderView *view, ButtonPresses *presses,
+void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool *optionScreen, Inventory *inv,
+                   FolderView *view, ButtonPresses *presses,
                    float *filterScroll) {
     static touchPosition prevTouch;
 
     TouchItem item = state->item;
     if (state->stage == STAGE_DOWN) {
-        if (item == TOUCH_FILTER || item == TOUCH_FILTER_BOX) {
+        if (item == TOUCH_FILTER || item == TOUCH_FILTER_TAG || item == TOUCH_FILTER_BOX) {
             presses->filterHeld = true;
             hidTouchRead(&prevTouch);
         }
@@ -192,6 +194,8 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
         if (item == TOUCH_FILTER && state->itemIdx < inventoryAvailableFilters(inv)) {
             presses->filters[state->itemIdx] = !presses->filters[state->itemIdx];
             updateFilteredIndices(inv, presses->filters);
+        } else if (item == TOUCH_FILTER_TAG && state->itemIdx < inventoryAvailableFilters(inv)) {
+            presses->heldFilterTag = state->itemIdx;
         } else if (item == TOUCH_SORT) {
             if (inv->sortOrder != state->itemIdx) {
                 inv->sortOrder = state->itemIdx;
@@ -221,6 +225,9 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
             *filterScroll -= curTouch.py - prevTouch.py;
             prevTouch = curTouch;
         }
+        if (presses->heldFilterTag >= 0) {
+            presses->tagHeldFrames++;
+        }
         if (item == TOUCH_COLOR) {
             state->color.held = true;
         }
@@ -247,6 +254,8 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
 
     if (state->stage != STAGE_UP) return;
     presses->filterHeld = false;
+    presses->heldFilterTag = -1;
+    presses->tagHeldFrames = 0;
     if (*screen == SCREEN_COLOR) state->color.held = false;
 
     if (item == TOUCH_INCR && presses->incrFrames == 0) {
@@ -491,7 +500,8 @@ static void updateGridScroll(Scroll *gridScroll, Inventory *inv) {
                              GRID_SPACING * (row + 1) - SCREEN_HEIGHT + GRID_VPAD);
 }
 
-void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, FolderView *view, bool *optionScreen, Scroll *listScroll,
+void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, FolderView *view, bool *optionScreen,
+                     Scroll *listScroll,
                      Scroll *gridScroll, ButtonPresses *presses, Screen prevScreen) {
     u32 kDown = hidKeysDown();
     u32 kHeld = hidKeysHeld();
@@ -716,7 +726,8 @@ void updateScroll(Scroll *listScroll, Scroll *gridScroll, Inventory *inv, Scroll
 
 }
 
-void updateUi(Screen *screen, DisplayMode *display, bool *optionScreen, TouchState *touchState, Inventory *inv, FolderView *view,
+void updateUi(Screen *screen, DisplayMode *display, bool *optionScreen, TouchState *touchState, Inventory *inv,
+              FolderView *view,
               Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses, Scroll *filterScroll) {
     updateTouchState(touchState, *screen, *optionScreen, &filterScroll->offset, hasQuery(inv), isFolderEmpty(view));
     updateUiTouch(touchState, screen, display, optionScreen, inv, view, presses, &filterScroll->offset);

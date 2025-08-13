@@ -10,7 +10,7 @@ bool showFilterBar(const Inventory *inv, Screen screen);
 
 void
 render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, DisplayMode display, bool optionScreen, Scroll listScroll,
-       Scroll gridScroll, const TouchState *touchState, const ButtonPresses *presses, Scroll filterScroll, const FolderView *folderView);
+       Scroll gridScroll, const TouchState *touchState, ButtonPresses *presses, Scroll filterScroll, const FolderView *folderView);
 
 u32 hsvToRgb(float h, float s, float v);
 void rgbToHsv(u32 color, float *h, float *s, float *v);
