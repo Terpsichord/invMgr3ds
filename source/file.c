@@ -84,7 +84,6 @@ void writeItem(FILE *f, const Item *item) {
         strcat(pathBuf, "/");
     }
     fprintf(f, "%s\t%d\t%s\t%s\n", item->name, item->quantity, descBuf, pathBuf);
-    printf("%s\t%d\t%s\t%s\n", item->name, item->quantity, descBuf, pathBuf);
 }
 
 void saveInventory(const Inventory *inv) {

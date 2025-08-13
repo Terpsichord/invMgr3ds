@@ -8,7 +8,7 @@
 #define INV_TOP_PAD      20.0f
 #define NAME_WIDTH       150.0f
 #define QUANTITY_WIDTH   40.0f
-#define TAG_WIDTH        100.0f
+#define TAG_WIDTH        75.0f
 #define TAG_SPACING      5.0f
 
 #define GRID_COLUMNS     5

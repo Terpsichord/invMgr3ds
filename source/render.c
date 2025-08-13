@@ -9,7 +9,7 @@
 //#define BORDERS 1
 
 
-u32 white, lightGray, gray, darkGray, black, darkenScreen, accent, darkAccent, lightAccent, scrollGray;
+u32 white, lightGray, gray, darkGray, black, darkenScreen, accent, darkAccent, lightAccent, scrollGray, lowBatteryColor;
 C2D_TextBuf staticTextBuf;
 C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, folderHintText, emptyHintText, filterFolderHintText, confirmationText,
         deleteText, cancelText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, outText, sortText, filterText,
@@ -64,6 +64,7 @@ void initColors(void) {
     black = C2D_Color32(0x00, 0x00, 0x00, 0xFF);
     darkenScreen = C2D_Color32(0x00, 0x00, 0x00, 0x60);
     scrollGray = C2D_Color32(0x40, 0x40, 0x40, 0x80);
+    lowBatteryColor = C2D_Color32(0xC8, 0x00, 0x00, 0xFF);
     bgColor = white;
 
     accent = calculateAccentColor(white, black, 0x30);
@@ -756,6 +757,39 @@ void drawScrollBar(Scroll scroll, float width, float maxHeight, float heightPort
     C2D_DrawRectSolid(x + width - 6.0f, offset, 0.0f, 2.0f, height, scrollGray);
 }
 
+void drawBatteryIndicator() {
+    static u8 prevLevel = 100;
+    static char levelString[5] = "100%";
+    static C2D_TextBuf textBuf;
+    static C2D_Text text;
+    static bool init = false;
+
+    if (!init) {
+        mcuHwcInit();
+        textBuf = C2D_TextBufNew(4);
+        C2D_TextParse(&text, textBuf, levelString);
+        C2D_TextOptimize(&text);
+        init = true;
+    }
+
+    u8 level = 0;
+    MCUHWC_GetBatteryLevel(&level);
+
+    if (level != prevLevel) {
+        snprintf(levelString, sizeof(levelString), "%3d%%", level);
+        C2D_TextBufClear(textBuf);
+        C2D_TextParse(&text, textBuf, levelString);
+        C2D_TextOptimize(&text);
+        prevLevel = level;
+    }
+
+    const float width = 32.0f, height = 12.0f;
+    C2D_DrawRectSolid(TOP_WIDTH - width - 1, 1.0f, 0.0f, width, height, black);
+    C2D_DrawRectSolid(TOP_WIDTH - width, 2.0f, 0.0f, width - 2, height - 2, level > 10 ? bgColor : lowBatteryColor);
+    C2D_DrawRectSolid(TOP_WIDTH - width - 3, 4.0f, 0.0f, 2.0f, height - 6.0f, black);
+    C2D_DrawText(&text, C2D_WithColor | C2D_AlignRight, TOP_WIDTH - 3.0f, 1.0f, 0.0f, 0.4f, 0.4f, level > 10 ? black : white);
+}
+
 // -----------------------------------------------------------------------------
 
 static void
@@ -787,6 +821,8 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
 
 
         drawFilterBar(inv, screen);
+
+        drawBatteryIndicator();
 
         if (screen == SCREEN_DELETE || screen == SCREEN_DELETE_FOLDER) {
             C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, TOP_WIDTH, SCREEN_HEIGHT, darkenScreen);
