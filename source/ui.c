@@ -26,6 +26,13 @@ void updateTouchState(TouchState *state, Screen screen, float *filterScroll, boo
         touchPosition touchPos;
         hidTouchRead(&touchPos);
 
+        if (screen == SCREEN_VIEW) {
+            if (touchPos.px >= NEW_FOLDER_X && touchPos.px < DELETE_FOLDER_X + FOLDER_BTN_WIDTH
+                && touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT) {
+                state->prevScreen = screen;
+                state->item = TOUCH_COLOR_FOLDER;
+            }
+        }
         if (screen == SCREEN_VIEW || screen == SCREEN_EDIT) {
             if (touchPos.px >= QTY_X && touchPos.px < QTY_X + QTY_WIDTH) {
                 if (touchPos.py >= INCR_Y && touchPos.py < INCR_Y + QTY_BTN_HEIGHT) {
@@ -92,6 +99,7 @@ void updateTouchState(TouchState *state, Screen screen, float *filterScroll, boo
                     if (touchPos.px >= NEW_EMPTY_X && touchPos.px < NEW_EMPTY_X + EMPTY_BTN_WIDTH) {
                         state->item = TOUCH_NEW_FOLDER;
                     } else if (touchPos.px >= COLOR_EMPTY_X && touchPos.px < COLOR_EMPTY_X + EMPTY_BTN_WIDTH) {
+                        state->prevScreen = screen;
                         state->item = TOUCH_COLOR_FOLDER;
                     }
                 }
@@ -102,6 +110,7 @@ void updateTouchState(TouchState *state, Screen screen, float *filterScroll, boo
                     } else if (touchPos.px >= RENAME_FOLDER_X && touchPos.px < RENAME_FOLDER_X + FOLDER_BTN_WIDTH) {
                         state->item = TOUCH_RENAME_FOLDER;
                     } else if (touchPos.px >= COLOR_FOLDER_X && touchPos.px < COLOR_FOLDER_X + FOLDER_BTN_WIDTH) {
+                        state->prevScreen = screen;
                         state->item = TOUCH_COLOR_FOLDER;
                     } else if (touchPos.px >= DELETE_FOLDER_X && touchPos.px < DELETE_FOLDER_X + FOLDER_BTN_WIDTH) {
                         state->item = TOUCH_DELETE_FOLDER;
@@ -468,7 +477,7 @@ static void updateGridScroll(Scroll *gridScroll, Inventory *inv) {
 }
 
 void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, FolderView *view, Scroll *listScroll,
-                     Scroll *gridScroll, ButtonPresses *presses) {
+                     Scroll *gridScroll, ButtonPresses *presses, Screen prevScreen) {
     u32 kDown = hidKeysDown();
     u32 kHeld = hidKeysHeld();
 
@@ -629,9 +638,9 @@ void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, Folde
     } else if (*screen == SCREEN_COLOR) {
         if (kDown & KEY_B) {
             view->currentFolder->color = view->oldColor;
-            *screen = SCREEN_FOLDER;
+            *screen = prevScreen;
         } else if (kDown & KEY_A) {
-            *screen = SCREEN_FOLDER;
+            *screen = prevScreen;
         }
     }
 
@@ -678,6 +687,6 @@ void updateUi(Screen *screen, DisplayMode *display, TouchState *touchState, Inve
               Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses, Scroll *filterScroll) {
     updateTouchState(touchState, *screen, &filterScroll->offset, hasQuery(inv), isFolderEmpty(view));
     updateUiTouch(touchState, screen, inv, view, presses, &filterScroll->offset);
-    updateUiButtons(screen, display, inv, view, listScroll, gridScroll, presses);
+    updateUiButtons(screen, display, inv, view, listScroll, gridScroll, presses, touchState->prevScreen);
     updateScroll(listScroll, gridScroll, inv, filterScroll);
 }

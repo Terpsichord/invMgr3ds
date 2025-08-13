@@ -763,6 +763,16 @@ void drawEmptyFolderButtons(const TouchState *touchState) {
                  0.0f, 0.5f, 0.5f, touchState->item == TOUCH_COLOR_FOLDER ? white : black);
 }
 
+void drawViewButton(const TouchState *touchState) {
+    float width = DELETE_X - NEW_FOLDER_X + FOLDER_BTN_WIDTH;
+    C2D_DrawRectSolid(NEW_FOLDER_X, ROW_BTN_Y, 0.0f, width, ROW_BTN_HEIGHT,
+                      touchState->item == TOUCH_COLOR_FOLDER ? darkGray : accent);
+
+    C2D_DrawText(&colorFolderText, C2D_AlignCenter | C2D_WithColor, NEW_FOLDER_X + width / 2,
+                 ROW_BTN_Y + 2 * TEXT_VPAD,
+                 0.0f, 0.5f, 0.5f, touchState->item == TOUCH_COLOR_FOLDER ? white : black);
+}
+
 u32 hsvToRgb(float h, float s, float v) {
     float c = v * s;
     float x = c * (1 - fabs(fmod(h / 60.0, 2) - 1));
@@ -923,13 +933,13 @@ void drawBatteryIndicator() {
 
 static void
 drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, DisplayMode display, Scroll listScroll,
-              Scroll gridScroll, const FolderView *view) {
+              Scroll gridScroll, const FolderView *view, const TouchState *touchState) {
 #ifndef CONSOLE_TOP
     C2D_TargetClear(top, bgColor);
 
     C2D_SceneBegin(top);
     {
-        if (screen == SCREEN_FOLDER || screen == SCREEN_DELETE_FOLDER || screen == SCREEN_COLOR) {
+        if (screen == SCREEN_FOLDER || screen == SCREEN_DELETE_FOLDER || (screen == SCREEN_COLOR && touchState->prevScreen == SCREEN_FOLDER)) {
             drawFolderList(view/*, scroll.offset*/);
         } else {
             if (display == DISPLAY_LIST) {
@@ -1006,6 +1016,10 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
                 return;
         }
 
+        if (screen == SCREEN_VIEW) {
+            drawViewButton(&state);
+        }
+
         if (!isEmptyRoot(view)) {
             drawHintText(screen, isFolderEmpty(view));
         }
@@ -1044,7 +1058,7 @@ render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Sc
 
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
-    drawTopScreen(top, inv, screen, display, listScroll, gridScroll, folderView);
+    drawTopScreen(top, inv, screen, display, listScroll, gridScroll, folderView, touchState);
     drawBottomScreen(bottom, inv, screen, touchState, filterScroll, presses, folderView);
 
     C3D_FrameEnd(0);

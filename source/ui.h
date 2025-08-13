@@ -46,16 +46,6 @@ typedef struct {
     bool held;
 } ColorState;
 
-typedef struct {
-    TouchItem item;
-    TouchStage stage;
-
-    // only valid if item is TOUCH_SORT or TOUCH_FILTER
-    int itemIdx;
-    // only valid if screen is SCREEN_COLOR
-    ColorState color;
-} TouchState;
-
 typedef enum {
     SCREEN_VIEW,
     SCREEN_EDIT,
@@ -66,6 +56,18 @@ typedef enum {
     SCREEN_FILTER_FOLDER,
     SCREEN_DELETE_FOLDER,
 } Screen;
+
+typedef struct {
+    TouchItem item;
+    TouchStage stage;
+
+    // only valid if item is TOUCH_SORT or TOUCH_FILTER
+    int itemIdx;
+    // only valid if screen is SCREEN_COLOR
+    ColorState color;
+    // only valid if screen is SCREEN_COLOR
+    Screen prevScreen;
+} TouchState;
 
 typedef enum {
     DISPLAY_LIST,
