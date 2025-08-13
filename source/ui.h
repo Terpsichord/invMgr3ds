@@ -25,8 +25,10 @@ typedef enum {
     TOUCH_FILTER_BOX,
     TOUCH_SEARCH,
     TOUCH_SEARCH_CLEAR,
+    TOUCH_COLOR,
     TOUCH_NEW_FOLDER,
     TOUCH_RENAME_FOLDER,
+    TOUCH_COLOR_FOLDER,
     TOUCH_DELETE_FOLDER,
 } TouchItem;
 
@@ -38,11 +40,20 @@ typedef enum {
 } TouchStage;
 
 typedef struct {
+    float hue;
+    float saturation;
+    float value;
+    bool held;
+} ColorState;
+
+typedef struct {
     TouchItem item;
     TouchStage stage;
 
     // only valid if item is TOUCH_SORT or TOUCH_FILTER
     int itemIdx;
+    // only valid if screen is SCREEN_COLOR
+    ColorState color;
 } TouchState;
 
 typedef enum {
@@ -51,6 +62,7 @@ typedef enum {
     SCREEN_FILTER,
     SCREEN_DELETE,
     SCREEN_FOLDER,
+    SCREEN_COLOR,
     SCREEN_FILTER_FOLDER,
     SCREEN_DELETE_FOLDER,
 } Screen;
@@ -64,6 +76,7 @@ typedef struct {
     int incrFrames;
     int decrFrames;
     bool filterHeld;
+    bool colorHeld;
     bool filters[MAX_FILTERS];
 } ButtonPresses;
 

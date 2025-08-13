@@ -12,7 +12,7 @@
 u32 white, lightGray, gray, darkGray, black, darkenScreen, accent, darkAccent, lightAccent, scrollGray, lowBatteryColor;
 C2D_TextBuf staticTextBuf;
 C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, folderHintText, emptyHintText, filterFolderHintText, confirmationText,
-        deleteText, cancelText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, outText, sortText, filterText,
+        deleteText, cancelText, confirmText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, colorFolderText, outText, sortText, filterText,
         searchText, emptyText, emptyRootText, commaText, quotesText, slashText, hashText, sortTexts[NUM_SORTS];
 
 static u32 bgColor;
@@ -110,11 +110,13 @@ void initText(void) {
     C2D_TextParse(&confirmationText, staticTextBuf, "Are you sure you want to delete\nthis item?");
     C2D_TextParse(&deleteText, staticTextBuf, "\uE002 Delete");
     C2D_TextParse(&cancelText, staticTextBuf, "\uE001 Cancel");
+    C2D_TextParse(&confirmText, staticTextBuf, "\uE000 Confirm");
     C2D_TextParse(&renameText, staticTextBuf, "Rename");
     C2D_TextParse(&editTagsText, staticTextBuf, "Edit tags");
     C2D_TextParse(&editDescText, staticTextBuf, "Edit desc.");
     C2D_TextParse(&newFolderText, staticTextBuf, "New folder");
     C2D_TextParse(&deleteFolderText, staticTextBuf, "Delete");
+    C2D_TextParse(&colorFolderText, staticTextBuf, "Edit color");
     C2D_TextParse(&outText, staticTextBuf, "Out of stock");
     C2D_TextParse(&sortText, staticTextBuf, "Sort by");
     C2D_TextParse(&filterText, staticTextBuf, "Filter by");
@@ -145,11 +147,13 @@ void initText(void) {
     C2D_TextOptimize(&confirmationText);
     C2D_TextOptimize(&deleteText);
     C2D_TextOptimize(&cancelText);
+    C2D_TextOptimize(&confirmText);
     C2D_TextOptimize(&renameText);
     C2D_TextOptimize(&editTagsText);
     C2D_TextOptimize(&editDescText);
     C2D_TextOptimize(&newFolderText);
     C2D_TextOptimize(&deleteFolderText);
+    C2D_TextOptimize(&colorFolderText);
     C2D_TextOptimize(&outText);
     C2D_TextOptimize(&sortText);
     C2D_TextOptimize(&filterText);
@@ -726,6 +730,8 @@ void drawFolderButtons(const TouchState *touchState) {
                       item == TOUCH_NEW_FOLDER ? darkGray : accent);
     C2D_DrawRectSolid(RENAME_FOLDER_X, ROW_BTN_Y, 0.0f, FOLDER_BTN_WIDTH, ROW_BTN_HEIGHT,
                       item == TOUCH_RENAME_FOLDER ? darkGray : accent);
+    C2D_DrawRectSolid(COLOR_FOLDER_X, ROW_BTN_Y, 0.0f, FOLDER_BTN_WIDTH, ROW_BTN_HEIGHT,
+                      item == TOUCH_COLOR_FOLDER ? darkGray : accent);
     C2D_DrawRectSolid(DELETE_FOLDER_X, ROW_BTN_Y, 0.0f, FOLDER_BTN_WIDTH, ROW_BTN_HEIGHT,
                       item == TOUCH_DELETE_FOLDER ? darkGray : accent);
 
@@ -735,19 +741,141 @@ void drawFolderButtons(const TouchState *touchState) {
     C2D_DrawText(&renameText, C2D_AlignCenter | C2D_WithColor, RENAME_FOLDER_X + FOLDER_BTN_WIDTH / 2,
                  ROW_BTN_Y + 2 * TEXT_VPAD,
                  0.0f, 0.5f, 0.5f, item == TOUCH_RENAME_FOLDER ? white : black);
+    C2D_DrawText(&colorFolderText, C2D_AlignCenter | C2D_WithColor, COLOR_FOLDER_X + FOLDER_BTN_WIDTH / 2,
+                 ROW_BTN_Y + 2 * TEXT_VPAD,
+                 0.0f, 0.5f, 0.5f, item == TOUCH_COLOR_FOLDER ? white : black);
     C2D_DrawText(&deleteFolderText, C2D_AlignCenter | C2D_WithColor, DELETE_FOLDER_X + FOLDER_BTN_WIDTH / 2,
                  ROW_BTN_Y + 2 * TEXT_VPAD,
                  0.0f, 0.5f, 0.5f, item == TOUCH_DELETE_FOLDER ? white : black);
 }
 
 void drawEmptyFolderButtons(const TouchState *touchState) {
-    bool pressed = touchState->item == TOUCH_NEW_FOLDER;
-    float width = DELETE_FOLDER_X - NEW_FOLDER_X + FOLDER_BTN_WIDTH;
-    C2D_DrawRectSolid(NEW_FOLDER_X, ROW_BTN_Y, 0.0f, width, ROW_BTN_HEIGHT,
-                      pressed ? darkGray : accent);
-    C2D_DrawText(&newFolderText, C2D_AlignCenter | C2D_WithColor, NEW_FOLDER_X + width / 2,
+    C2D_DrawRectSolid(NEW_EMPTY_X, ROW_BTN_Y, 0.0f, EMPTY_BTN_WIDTH, ROW_BTN_HEIGHT,
+                      touchState->item == TOUCH_NEW_FOLDER ? darkGray : accent);
+    C2D_DrawRectSolid(COLOR_EMPTY_X, ROW_BTN_Y, 0.0f, EMPTY_BTN_WIDTH, ROW_BTN_HEIGHT,
+                      touchState->item == TOUCH_COLOR_FOLDER ? darkGray : accent);
+
+    C2D_DrawText(&newFolderText, C2D_AlignCenter | C2D_WithColor, NEW_FOLDER_X + EMPTY_BTN_WIDTH / 2,
                  ROW_BTN_Y + 2 * TEXT_VPAD,
-                 0.0f, 0.5f, 0.5f, pressed ? white : black);
+                 0.0f, 0.5f, 0.5f, touchState->item == TOUCH_NEW_FOLDER ? white : black);
+    C2D_DrawText(&colorFolderText, C2D_AlignCenter | C2D_WithColor, COLOR_FOLDER_X + EMPTY_BTN_WIDTH / 2,
+                 ROW_BTN_Y + 2 * TEXT_VPAD,
+                 0.0f, 0.5f, 0.5f, touchState->item == TOUCH_COLOR_FOLDER ? white : black);
+}
+
+u32 hsvToRgb(float h, float s, float v) {
+    float c = v * s;
+    float x = c * (1 - fabs(fmod(h / 60.0, 2) - 1));
+    float m = v - c;
+
+    float r, g, b;
+    if (h < 60) {
+        r = c;
+        g = x;
+        b = 0;
+    }
+    else if (h < 120) {
+        r = x;
+        g = c;
+        b = 0;
+    }
+    else if (h < 180) {
+        r = 0;
+        g = c;
+        b = x;
+    }
+    else if (h < 240) {
+        r = 0;
+        g = x;
+        b = c;
+    }
+    else if (h < 300) {
+        r = x;
+        g = 0;
+        b = c;
+    }
+    else {
+        r = c;
+        g = 0;
+        b = x;
+    }
+
+    return C2D_Color32(
+            (u8)((r + m) * 0xFF),
+            (u8)((g + m) * 0xFF),
+            (u8)((b + m) * 0xFF),
+            0xFF
+    );
+}
+
+void rgbToHsv(u32 color, float *h, float *s, float *v) {
+    float r = ((color) & 0xFF) / 255.0f;
+    float g = ((color >> 8) & 0xFF) / 255.0f;
+    float b = ((color >> 16) & 0xFF) / 255.0f;
+
+    float max = fmaxf(r, fmaxf(g, b));
+    float min = fminf(r, fminf(g, b));
+    float delta = max - min;
+
+    *v = max;
+
+    if (max == 0) {
+        *s = 0;
+        *h = 0;
+        return;
+    }
+
+    *s = delta / max;
+
+    if (delta == 0) {
+        *h = 0;
+        return;
+    }
+
+    if (max == r) {
+        *h = 60.0f * fmodf(((g - b) / delta), 6.0f);
+    } else if (max == g) {
+        *h = 60.0f * (((b - r) / delta) + 2.0f);
+    } else { // max == b
+        *h = 60.0f * (((r - g) / delta) + 4.0f);
+    }
+
+    if (*h < 0) *h += 360.0f;
+}
+
+void drawColorBar(float x, float y, float w, float h, float hue) {
+    int steps = (int) h;
+    for (int i = 0; i < steps; i++) {
+        float hue1 = ((float) i / steps) * 360.0f;
+        float hue2 = ((float) (i + 1) / steps) * 360.0f;
+
+        uint32_t c1 = hsvToRgb(hue1, 1.0f, 1.0f);
+        uint32_t c2 = hsvToRgb(hue2, 1.0f, 1.0f);
+
+        float y0 = y + i;
+        float y1 = y + i + 1;
+
+        C2D_DrawTriangle(x, y0, c1, x + w, y0, c1, x + w, y1, c2, 0.0f);
+        C2D_DrawTriangle(x, y0, c1, x + w, y1, c2, x, y1, c2, 0.0f);
+    }
+
+    C2D_DrawRectSolid(x, y + h * hue / 360.0f - 1.0f, 0.0f, w, 3.0f, white);
+}
+
+void drawColorView(const TouchState *touchState) {
+    const ColorState *color = &touchState->color;
+
+    C2D_DrawRectSolid(COLOR_X - COLOR_PAD - BORDER, COLOR_Y - COLOR_PAD - BORDER, 0.0f, COLOR_SIZE + COLOR_BAR_WIDTH + 3 * COLOR_PAD + 2 * BORDER, COLOR_SIZE + 2 * COLOR_PAD + 2 * BORDER, accent);
+    C2D_DrawRectSolid(COLOR_X - COLOR_PAD, COLOR_Y - COLOR_PAD, 0.0f, COLOR_SIZE + COLOR_BAR_WIDTH + 3 * COLOR_PAD, COLOR_SIZE + 2 * COLOR_PAD, white);
+    C2D_DrawRectangle(COLOR_X, COLOR_Y, 0.0f, COLOR_SIZE, COLOR_SIZE, white,
+                      hsvToRgb(color->hue, 1.0f, 1.0f), black, black);
+    drawColorBar(COLOR_X + COLOR_SIZE + COLOR_PAD, COLOR_Y, COLOR_BAR_WIDTH, COLOR_SIZE, color->hue);
+
+    C2D_DrawRectSolid(COLOR_X + color->saturation * COLOR_SIZE - 5.0f, COLOR_Y + (1.0f - color->value) * COLOR_SIZE - 1.0f, 0.0f, 10.0f, 2.0f, white);
+    C2D_DrawRectSolid(COLOR_X + color->saturation * COLOR_SIZE - 1.0f, COLOR_Y + (1.0f - color->value) * COLOR_SIZE - 5.0f, 0.0f, 2.0f, 10.0f, white);
+
+    C2D_DrawText(&cancelText, C2D_AlignCenter, COLOR_CANCEL_X, COLOR_OPT_Y, 0.0f, 0.5f, 0.5f, black);
+    C2D_DrawText(&confirmText, C2D_AlignCenter, COLOR_CONFIRM_X, COLOR_OPT_Y, 0.0f, 0.5f, 0.5f, black);
 }
 
 void drawScrollBar(Scroll scroll, float width, float maxHeight, float heightPortion, float x, float y) {
@@ -787,7 +915,8 @@ void drawBatteryIndicator() {
     C2D_DrawRectSolid(TOP_WIDTH - width - 1, 1.0f, 0.0f, width, height, black);
     C2D_DrawRectSolid(TOP_WIDTH - width, 2.0f, 0.0f, width - 2, height - 2, level > 10 ? bgColor : lowBatteryColor);
     C2D_DrawRectSolid(TOP_WIDTH - width - 3, 4.0f, 0.0f, 2.0f, height - 6.0f, black);
-    C2D_DrawText(&text, C2D_WithColor | C2D_AlignRight, TOP_WIDTH - 3.0f, 1.0f, 0.0f, 0.4f, 0.4f, level > 10 ? black : white);
+    C2D_DrawText(&text, C2D_WithColor | C2D_AlignRight, TOP_WIDTH - 3.0f, 1.0f, 0.0f, 0.4f, 0.4f,
+                 level > 10 ? black : white);
 }
 
 // -----------------------------------------------------------------------------
@@ -800,7 +929,7 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
 
     C2D_SceneBegin(top);
     {
-        if (screen == SCREEN_FOLDER || screen == SCREEN_DELETE_FOLDER) {
+        if (screen == SCREEN_FOLDER || screen == SCREEN_DELETE_FOLDER || screen == SCREEN_COLOR) {
             drawFolderList(view/*, scroll.offset*/);
         } else {
             if (display == DISPLAY_LIST) {
@@ -809,12 +938,14 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
                 if (listScroll.max > 0) {
                     drawScrollBar(listScroll, TOP_WIDTH,
                                   SCREEN_HEIGHT - INV_TOP_PAD - 2 * TEXT_VPAD - showFilterBar(inv, screen) * BAR_HEIGHT,
-                                  SCREEN_HEIGHT - INV_TOP_PAD - showFilterBar(inv, screen) * BAR_HEIGHT, 0.0f, INV_TOP_PAD + TEXT_VPAD);
+                                  SCREEN_HEIGHT - INV_TOP_PAD - showFilterBar(inv, screen) * BAR_HEIGHT, 0.0f,
+                                  INV_TOP_PAD + TEXT_VPAD);
                 }
             } else {
                 drawGrid(inv, view, gridScroll.offset);
                 if (gridScroll.max > 0) {
-                    drawScrollBar(gridScroll, TOP_WIDTH, SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD, SCREEN_HEIGHT - GRID_VPAD, 0.0f, GRID_VPAD);
+                    drawScrollBar(gridScroll, TOP_WIDTH, SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD,
+                                  SCREEN_HEIGHT - GRID_VPAD, 0.0f, GRID_VPAD);
                 }
             }
         }
@@ -868,6 +999,9 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
                     drawItemView(inv, screen == SCREEN_EDIT || screen == SCREEN_DELETE, &state);
                 }
                 break;
+            case SCREEN_COLOR:
+                drawColorView(touchState);
+                return;
             default:
                 return;
         }

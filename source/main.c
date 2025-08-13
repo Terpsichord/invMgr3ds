@@ -33,7 +33,7 @@ int main() {
     DisplayMode display = DISPLAY_LIST;
 
     TouchState touchState;
-    ButtonPresses presses = {0, 0, 0, {0}};
+    ButtonPresses presses = {0, 0, 0, 0, {0}};
     Scroll listScroll = {0.0f, 0.0f},
            filterScroll = {0.0f, 0.0f},
            gridScroll = {0.0f, 0.0f};

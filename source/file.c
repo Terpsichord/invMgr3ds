@@ -109,6 +109,11 @@ int loadFolderView(FolderView *view) {
     char name[MAX_FOLDER_LEN];
     int depth;
     u32 color;
+
+    if (fscanf(f, "root %lX\n", &color) == 1) {
+        view->rootFolder->color = color;
+    }
+
     while (fscanf(f, "%d\t%255[^\t\n]\t%lX\n", &depth, name, &color) == 3) {
         if (depth >= MAX_FOLDERS) {
             continue;
@@ -146,6 +151,7 @@ void saveFolderView(const FolderView *folderView) {
     FILE *f = fopen(FILE_PATH "folders.txt", "w");
     if (!f) return;
 
+    fprintf(f, "root %lX\n", folderView->rootFolder->color);
     for (int i = 0; i < folderView->rootFolder->numChildren; i++) {
         saveFolders(folderView->rootFolder->children[i], f, 0);
     }

@@ -88,9 +88,12 @@ void updateTouchState(TouchState *state, Screen screen, float *filterScroll, boo
         }
         if (screen == SCREEN_FOLDER) {
             if (folderEmpty) {
-                if (touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT
-                    && touchPos.px >= NEW_FOLDER_X && touchPos.px < DELETE_FOLDER_X + FOLDER_BTN_WIDTH) {
-                    state->item = TOUCH_NEW_FOLDER;
+                if (touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT) {
+                    if (touchPos.px >= NEW_EMPTY_X && touchPos.px < NEW_EMPTY_X + EMPTY_BTN_WIDTH) {
+                        state->item = TOUCH_NEW_FOLDER;
+                    } else if (touchPos.px >= COLOR_EMPTY_X && touchPos.px < COLOR_EMPTY_X + EMPTY_BTN_WIDTH) {
+                        state->item = TOUCH_COLOR_FOLDER;
+                    }
                 }
             } else {
                 if (touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT) {
@@ -98,9 +101,27 @@ void updateTouchState(TouchState *state, Screen screen, float *filterScroll, boo
                         state->item = TOUCH_NEW_FOLDER;
                     } else if (touchPos.px >= RENAME_FOLDER_X && touchPos.px < RENAME_FOLDER_X + FOLDER_BTN_WIDTH) {
                         state->item = TOUCH_RENAME_FOLDER;
+                    } else if (touchPos.px >= COLOR_FOLDER_X && touchPos.px < COLOR_FOLDER_X + FOLDER_BTN_WIDTH) {
+                        state->item = TOUCH_COLOR_FOLDER;
                     } else if (touchPos.px >= DELETE_FOLDER_X && touchPos.px < DELETE_FOLDER_X + FOLDER_BTN_WIDTH) {
                         state->item = TOUCH_DELETE_FOLDER;
                     }
+                }
+            }
+        }
+        if (screen == SCREEN_COLOR) {
+            if (state->color.held) {
+                state->color.saturation = (touchPos.px - COLOR_X) / COLOR_SIZE;
+                state->color.saturation = MIN(1.0f, MAX(0.0f, state->color.saturation));
+                state->color.value = 1.0f - (touchPos.py - COLOR_Y) / COLOR_SIZE;
+                state->color.value = MIN(1.0f, MAX(0.0f, state->color.value));
+            } else if (touchPos.py >= COLOR_Y && touchPos.py < COLOR_Y + COLOR_SIZE) {
+                if (touchPos.px >= COLOR_X && touchPos.px < COLOR_X + COLOR_SIZE) {
+                    state->color.saturation = (touchPos.px - COLOR_X) / COLOR_SIZE;
+                    state->color.value = 1.0f - (touchPos.py - COLOR_Y) / COLOR_SIZE;
+                    state->item = TOUCH_COLOR;
+                } else if (touchPos.px >= COLOR_X + COLOR_SIZE + COLOR_PAD && touchPos.px < COLOR_X + COLOR_SIZE + COLOR_PAD + COLOR_BAR_WIDTH) {
+                    state->color.hue = (touchPos.py - COLOR_Y) * 360.0f / COLOR_SIZE;
                 }
             }
         }
@@ -146,6 +167,9 @@ void updateUiTouch(TouchState *state, Screen *screen, Inventory *inv, FolderView
             presses->filterHeld = true;
             hidTouchRead(&prevTouch);
         }
+        if (item == TOUCH_COLOR) {
+            state->color.held = true;
+        }
 
         if (item == TOUCH_FILTER && state->itemIdx < inventoryAvailableFilters(inv)) {
             presses->filters[state->itemIdx] = !presses->filters[state->itemIdx];
@@ -177,6 +201,9 @@ void updateUiTouch(TouchState *state, Screen *screen, Inventory *inv, FolderView
             *filterScroll -= curTouch.py - prevTouch.py;
             prevTouch = curTouch;
         }
+        if (item == TOUCH_COLOR) {
+            state->color.held = true;
+        }
     }
 
     if (presses->decrFrames > 0) {
@@ -192,8 +219,15 @@ void updateUiTouch(TouchState *state, Screen *screen, Inventory *inv, FolderView
         }
     }
 
+    if (*screen == SCREEN_COLOR) {
+        view->currentFolder->color = hsvToRgb(state->color.hue, state->color.saturation, state->color.value);
+    } else {
+        state->color.held = false;
+    }
+
     if (state->stage != STAGE_UP) return;
     presses->filterHeld = false;
+    if (*screen == SCREEN_COLOR) state->color.held = false;
 
     if (item == TOUCH_INCR && presses->incrFrames == 0) {
         inventoryChangeQuantity(inv, +1);
@@ -332,6 +366,10 @@ void updateUiTouch(TouchState *state, Screen *screen, Inventory *inv, FolderView
         *screen = SCREEN_DELETE;
     } else if (item == TOUCH_DELETE_FOLDER) {
         *screen = SCREEN_DELETE_FOLDER;
+    } else if (item == TOUCH_COLOR_FOLDER) {
+        view->oldColor = view->currentFolder->color;
+        rgbToHsv(view->oldColor, &state->color.hue, &state->color.saturation, &state->color.value);
+        *screen = SCREEN_COLOR;
     }
 }
 
@@ -429,7 +467,8 @@ static void updateGridScroll(Scroll *gridScroll, Inventory *inv) {
                              GRID_SPACING * (row + 1) - SCREEN_HEIGHT + GRID_VPAD);
 }
 
-void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, FolderView *view, Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses) {
+void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, FolderView *view, Scroll *listScroll,
+                     Scroll *gridScroll, ButtonPresses *presses) {
     u32 kDown = hidKeysDown();
     u32 kHeld = hidKeysHeld();
 
@@ -587,9 +626,17 @@ void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, Folde
                 *screen = SCREEN_VIEW;
             }
         }
+    } else if (*screen == SCREEN_COLOR) {
+        if (kDown & KEY_B) {
+            view->currentFolder->color = view->oldColor;
+            *screen = SCREEN_FOLDER;
+        } else if (kDown & KEY_A) {
+            *screen = SCREEN_FOLDER;
+        }
     }
 
-    if (*screen == SCREEN_VIEW || *screen == SCREEN_EDIT || *screen == SCREEN_FILTER || *screen == SCREEN_FILTER_FOLDER) {
+    if (*screen == SCREEN_VIEW || *screen == SCREEN_EDIT || *screen == SCREEN_FILTER ||
+        *screen == SCREEN_FILTER_FOLDER) {
         if (kHeld & (KEY_CPAD_UP | KEY_CPAD_DOWN)) {
             circlePosition circlePos;
             hidCircleRead(&circlePos);
@@ -613,7 +660,7 @@ void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, Folde
 
 void updateScroll(Scroll *listScroll, Scroll *gridScroll, Inventory *inv, Scroll *filterScroll) {
     listScroll->max = numShownItems(inv) * ITEM_HEIGHT - SCREEN_HEIGHT + INV_TOP_PAD +
-                  showFilterBar(inv, SCREEN_VIEW) * BAR_HEIGHT;
+                      showFilterBar(inv, SCREEN_VIEW) * BAR_HEIGHT;
     listScroll->offset = MIN(listScroll->offset, listScroll->max);
     listScroll->offset = MAX(0.0f, listScroll->offset);
 

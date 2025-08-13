@@ -25,6 +25,7 @@ typedef struct {
     Folder *rootFolder;
     Folder *currentFolder;
     int selectedIdx;
+    u32 oldColor;
     C2D_TextBuf textBuf;
 } FolderView;
 
