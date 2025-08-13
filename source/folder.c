@@ -104,12 +104,6 @@ Folder *findOrMakeFolder(FolderView *view, const char *name, Folder *parent) {
 
 }
 
-void printFolder(Folder *folder) {
-    printf("Folder: %s\n", folder->name);
-    printf("Color: %lX\n", folder->color);
-    printf("Num Children: %d\n", folder->numChildren);
-}
-
 void folderViewNavigateChild(FolderView *view) {
     if (view->selectedIdx < view->currentFolder->numChildren) {
         view->currentFolder = view->currentFolder->children[view->selectedIdx];

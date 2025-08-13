@@ -420,7 +420,9 @@ static SwkbdButton addItem(Inventory *inv, Folder *folder) {
         swkbdInit(&descKb, SWKBD_TYPE_NORMAL, 2, MAX_ITEM_LEN - 1);
         swkbdSetHintText(&descKb, "Enter item description (enter tags as \"#tag1 #tag2\")");
         swkbdSetFeatures(&descKb, SWKBD_MULTILINE);
-        swkbdInputText(&descKb, descBuf, MAX_ITEM_LEN);
+        if (swkbdInputText(&descKb, descBuf, MAX_ITEM_LEN) == SWKBD_BUTTON_LEFT) {
+            return SWKBD_BUTTON_LEFT;
+        }
     }
 
     if (button != SWKBD_BUTTON_LEFT) {
@@ -533,11 +535,32 @@ void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, Folde
             }
         }
         if (*screen == SCREEN_VIEW) {
-            if (kDown & KEY_X) {
+            if (kDown & KEY_R) {
                 *screen = SCREEN_FILTER;
+            }
+            if (kDown & KEY_X) {
+                int prevIdx = inv->selectedIdx;
+                SwkbdButton button = addItem(inv, view->currentFolder);
+                if (button != SWKBD_BUTTON_LEFT) {
+                    inventorySetQuantity(inv, getItem(inv, prevIdx)->quantity);
+
+                    getSelectedItem(inv)->numTags = getItem(inv, prevIdx)->numTags;
+                    for (int i = 0; i < getItem(inv, prevIdx)->numTags; i++) {
+                        strncpy(getSelectedItem(inv)->tags[i], getItem(inv, prevIdx)->tags[i], MAX_TAG_LEN - 1);
+                    }
+                    if (getSelectedItem(inv)->desc[0] == '\0') {
+                        strncpy(getSelectedItem(inv)->desc, getItem(inv, prevIdx)->desc, MAX_ITEM_LEN - 1);
+                    }
+                    refreshItemTags(inv, getSelectedItem(inv));
+
+                    updateListScroll(listScroll, inv, *screen);
+                    updateGridScroll(gridScroll, inv);
+                }
             }
             if (kDown & KEY_Y) {
                 addItem(inv, view->currentFolder);
+                updateListScroll(listScroll, inv, *screen);
+                updateGridScroll(gridScroll, inv);
             }
             if (kDown & KEY_B) {
                 folderViewNavigateParent(view);
@@ -547,7 +570,7 @@ void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, Folde
             if (kDown & KEY_A && numShownItems(inv) > 0) {
                 editItem(view, inv, screen, getSelectedItem(inv));
             }
-            if (kDown & KEY_B) {
+            if (kDown & (KEY_R | KEY_B)) {
                 *screen = SCREEN_FOLDER;
             }
         }
@@ -567,7 +590,7 @@ void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, Folde
             *screen = SCREEN_DELETE;
         }
     } else if (*screen == SCREEN_FILTER) {
-        if (kDown & KEY_B) {
+        if (kDown & (KEY_R | KEY_B)) {
             *screen = SCREEN_VIEW;
         }
         if (kDown & KEY_DDOWN) {
@@ -623,7 +646,7 @@ void updateUiButtons(Screen *screen, DisplayMode *display, Inventory *inv, Folde
             folderViewNavigateParent(view);
         }
 
-        if (!isFolderEmpty(view) && kDown & KEY_X) {
+        if (!isFolderEmpty(view) && kDown & KEY_R) {
             inventorySetFolderFilter(inv, view->currentFolder);
             *screen = SCREEN_FILTER_FOLDER;
         }

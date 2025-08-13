@@ -93,81 +93,50 @@ void initColors(void) {
     folderColors[19] = C2D_Color32(0xD2, 0xF0, 0xDC, 0xFF);
 }
 
+static void addText(C2D_Text *text, const char *str) {
+    C2D_TextParse(text, staticTextBuf, str);
+    C2D_TextOptimize(text);
+}
+
 void initText(void) {
     staticTextBuf = C2D_TextBufNew(1024);
 
-    C2D_TextParse(&nameText, staticTextBuf, "Name");
-    C2D_TextParse(&qtyText, staticTextBuf, "Qty.");
-    C2D_TextParse(&tagsText, staticTextBuf, "Tags");
-    C2D_TextParse(&descText, staticTextBuf, "Description");
-    C2D_TextParse(&viewHintText, staticTextBuf,
-                  "\uE07D Navigate | \uE000 Edit | \uE002 Filter | \uE003 Add | \uE001 Back");
-    C2D_TextParse(&editHintText, staticTextBuf, "\uE07D Adjust quantity | \uE002 Delete | \uE000/\uE001 Back");
-    C2D_TextParse(&filterHintText, staticTextBuf, "\uE07D Change sort order | \uE001 Back");
-    C2D_TextParse(&folderHintText, staticTextBuf, "\uE07D Navigate | \uE000 Open folder | \uE002 Filter | \uE001 Back");
-    C2D_TextParse(&emptyHintText, staticTextBuf, "\uE07D Navigate | \uE003 Add new item | \uE001 Back");
-    C2D_TextParse(&filterFolderHintText, staticTextBuf, "\uE07D Navigate | \uE000 Edit item | \uE001 Back");
-    C2D_TextParse(&confirmationText, staticTextBuf, "Are you sure you want to delete\nthis item?");
-    C2D_TextParse(&deleteText, staticTextBuf, "\uE002 Delete");
-    C2D_TextParse(&cancelText, staticTextBuf, "\uE001 Cancel");
-    C2D_TextParse(&confirmText, staticTextBuf, "\uE000 Confirm");
-    C2D_TextParse(&renameText, staticTextBuf, "Rename");
-    C2D_TextParse(&editTagsText, staticTextBuf, "Edit tags");
-    C2D_TextParse(&editDescText, staticTextBuf, "Edit desc.");
-    C2D_TextParse(&newFolderText, staticTextBuf, "New folder");
-    C2D_TextParse(&deleteFolderText, staticTextBuf, "Delete");
-    C2D_TextParse(&colorFolderText, staticTextBuf, "Edit color");
-    C2D_TextParse(&outText, staticTextBuf, "Out of stock");
-    C2D_TextParse(&sortText, staticTextBuf, "Sort by");
-    C2D_TextParse(&filterText, staticTextBuf, "Filter by");
-    C2D_TextParse(&searchText, staticTextBuf, "Enter search term...");
-    C2D_TextParse(&emptyText, staticTextBuf, "No items...");
-    C2D_TextParse(&emptyRootText, staticTextBuf, "Try getting started by adding a folder");
-    C2D_TextParse(&commaText, staticTextBuf, ",");
-    C2D_TextParse(&quotesText, staticTextBuf, "\"");
-    C2D_TextParse(&slashText, staticTextBuf, "/");
-    C2D_TextParse(&hashText, staticTextBuf, "#");
+    addText(&nameText,              "Name");
+    addText(&qtyText,               "Qty.");
+    addText(&tagsText,              "Tags");
+    addText(&descText,              "Description");
+    addText(&viewHintText,          "\uE000 Edit | \uE002 Duplicate | \uE003 Add | \uE005 Filter | \uE001 Back");
+    addText(&editHintText,          "\uE07D Adjust quantity | \uE002 Delete | \uE000/\uE001 Back");
+    addText(&filterHintText,        "\uE07D Change sort order | \uE005/\uE001 Back");
+    addText(&folderHintText,        "\uE000 Open folder | \uE005 Filter items | \uE001 Back");
+    addText(&emptyHintText,         "\uE003 Add new item | \uE001 Back");
+    addText(&filterFolderHintText,  "\uE000 Edit item | \uE005/\uE001 Back");
+    addText(&confirmationText,      "Are you sure you want to delete\nthis item?");
+    addText(&deleteText,            "\uE002 Delete");
+    addText(&cancelText,            "\uE001 Cancel");
+    addText(&confirmText,           "\uE000 Confirm");
+    addText(&renameText,            "Rename");
+    addText(&editTagsText,          "Edit tags");
+    addText(&editDescText,          "Edit desc.");
+    addText(&newFolderText,         "New folder");
+    addText(&deleteFolderText,       "Delete");
+    addText(&colorFolderText,       "Edit color");
+    addText(&outText,               "Out of stock");
+    addText(&sortText,              "Sort by");
+    addText(&filterText,            "Filter by");
+    addText(&searchText,            "Enter search term...");
+    addText(&emptyText,             "No items...");
+    addText(&emptyRootText,         "Try getting started by adding a folder");
+    addText(&commaText,             ",");
+    addText(&quotesText,            "\"");
+    addText(&slashText,             "/");
+    addText(&hashText,              "#");
 
-    C2D_TextParse(&sortTexts[SORT_NONE], staticTextBuf, "None");
-    C2D_TextParse(&sortTexts[SORT_QTY_ASC], staticTextBuf, "Qty. asc.");
-    C2D_TextParse(&sortTexts[SORT_QTY_DESC], staticTextBuf, "Qty. desc.");
-    C2D_TextParse(&sortTexts[SORT_NAME_AZ], staticTextBuf, "Name A-Z");
-    C2D_TextParse(&sortTexts[SORT_NAME_ZA], staticTextBuf, "Name Z-A");
-
-    C2D_TextOptimize(&nameText);
-    C2D_TextOptimize(&qtyText);
-    C2D_TextOptimize(&tagsText);
-    C2D_TextOptimize(&descText);
-    C2D_TextOptimize(&viewHintText);
-    C2D_TextOptimize(&editHintText);
-    C2D_TextOptimize(&filterHintText);
-    C2D_TextOptimize(&folderHintText);
-    C2D_TextOptimize(&emptyHintText);
-    C2D_TextOptimize(&filterFolderHintText);
-    C2D_TextOptimize(&confirmationText);
-    C2D_TextOptimize(&deleteText);
-    C2D_TextOptimize(&cancelText);
-    C2D_TextOptimize(&confirmText);
-    C2D_TextOptimize(&renameText);
-    C2D_TextOptimize(&editTagsText);
-    C2D_TextOptimize(&editDescText);
-    C2D_TextOptimize(&newFolderText);
-    C2D_TextOptimize(&deleteFolderText);
-    C2D_TextOptimize(&colorFolderText);
-    C2D_TextOptimize(&outText);
-    C2D_TextOptimize(&sortText);
-    C2D_TextOptimize(&filterText);
-    C2D_TextOptimize(&searchText);
-    C2D_TextOptimize(&emptyText);
-    C2D_TextOptimize(&emptyRootText);
-    C2D_TextOptimize(&commaText);
-    C2D_TextOptimize(&quotesText);
-    C2D_TextOptimize(&slashText);
-    C2D_TextOptimize(&hashText);
-
-    for (int i = 0; i < NUM_SORTS; i++) {
-        C2D_TextOptimize(&sortTexts[i]);
-    }
+    addText(&sortTexts[SORT_NONE],     "None");
+    addText(&sortTexts[SORT_QTY_ASC],  "Qty. asc.");
+    addText(&sortTexts[SORT_QTY_DESC], "Qty. desc.");
+    addText(&sortTexts[SORT_NAME_AZ],  "Name A-Z");
+    addText(&sortTexts[SORT_NAME_ZA],  "Name Z-A");
 }
 
 void initRender(C3D_RenderTarget **top, C3D_RenderTarget **bottom) {
