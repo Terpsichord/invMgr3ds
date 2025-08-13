@@ -111,3 +111,15 @@
 #define COLOR_OPT_WIDTH  ((BOTTOM_WIDTH) - 2 * (VIEW_HPAD))
 #define COLOR_CANCEL_X   ((VIEW_HPAD) + ((COLOR_OPT_WIDTH) / 3.0f))
 #define COLOR_CONFIRM_X  ((VIEW_HPAD) + ((COLOR_OPT_WIDTH) * 2.0f / 3.0f))
+
+
+#define BURGER_SIZE      27.0f
+#define BURGER_HPAD      3.0f
+#define BURGER_VPAD      5.0f
+#define BURGER_HEIGHT    3.0f
+#define BURGER_SPACING   (((BURGER_SIZE) - 2 * (BURGER_VPAD) - 3 * (BURGER_HEIGHT)) / 2)
+
+#define OPTIONS_HPAD     30.0f
+#define OPTIONS_VPAD     50.0f
+#define OPTION_TEXT_PAD  15.0f
+#define OPTION_BOX_SIZE  25.0f

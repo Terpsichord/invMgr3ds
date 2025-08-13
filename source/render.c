@@ -11,8 +11,8 @@
 
 u32 white, lightGray, gray, darkGray, black, darkenScreen, accent, darkAccent, lightAccent, scrollGray, lowBatteryColor;
 C2D_TextBuf staticTextBuf;
-C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, folderHintText, emptyHintText, filterFolderHintText, confirmationText,
-        deleteText, cancelText, confirmText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, colorFolderText, outText, sortText, filterText,
+C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, folderHintText, emptyHintText, filterFolderHintText, gridOptionText, confirmationText,
+        deleteText, cancelText, confirmText, backText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, colorFolderText, outText, sortText, filterText,
         searchText, emptyText, emptyRootText, commaText, quotesText, slashText, hashText, sortTexts[NUM_SORTS];
 
 static u32 bgColor;
@@ -101,42 +101,44 @@ static void addText(C2D_Text *text, const char *str) {
 void initText(void) {
     staticTextBuf = C2D_TextBufNew(1024);
 
-    addText(&nameText,              "Name");
-    addText(&qtyText,               "Qty.");
-    addText(&tagsText,              "Tags");
-    addText(&descText,              "Description");
-    addText(&viewHintText,          "\uE000 Edit | \uE002 Duplicate | \uE003 Add | \uE005 Filter | \uE001 Back");
-    addText(&editHintText,          "\uE07D Adjust quantity | \uE002 Delete | \uE000/\uE001 Back");
-    addText(&filterHintText,        "\uE07D Change sort order | \uE005/\uE001 Back");
-    addText(&folderHintText,        "\uE000 Open folder | \uE005 Filter items | \uE001 Back");
-    addText(&emptyHintText,         "\uE003 Add new item | \uE001 Back");
-    addText(&filterFolderHintText,  "\uE000 Edit item | \uE005/\uE001 Back");
-    addText(&confirmationText,      "Are you sure you want to delete\nthis item?");
-    addText(&deleteText,            "\uE002 Delete");
-    addText(&cancelText,            "\uE001 Cancel");
-    addText(&confirmText,           "\uE000 Confirm");
-    addText(&renameText,            "Rename");
-    addText(&editTagsText,          "Edit tags");
-    addText(&editDescText,          "Edit desc.");
-    addText(&newFolderText,         "New folder");
-    addText(&deleteFolderText,       "Delete");
-    addText(&colorFolderText,       "Edit color");
-    addText(&outText,               "Out of stock");
-    addText(&sortText,              "Sort by");
-    addText(&filterText,            "Filter by");
-    addText(&searchText,            "Enter search term...");
-    addText(&emptyText,             "No items...");
-    addText(&emptyRootText,         "Try getting started by adding a folder");
-    addText(&commaText,             ",");
-    addText(&quotesText,            "\"");
-    addText(&slashText,             "/");
-    addText(&hashText,              "#");
+    addText(&nameText, "Name");
+    addText(&qtyText, "Qty.");
+    addText(&tagsText, "Tags");
+    addText(&descText, "Description");
+    addText(&viewHintText, "\uE000 Edit | \uE002 Copy | \uE003 Add | \uE005 Filter | \uE001 Back");
+    addText(&editHintText, "\uE07D Adjust quantity | \uE002 Delete | \uE000/\uE001 Back");
+    addText(&filterHintText, "\uE07D Change sort order | \uE005/\uE001 Back");
+    addText(&folderHintText, "\uE000 Open folder | \uE005 Filter items | \uE001 Back");
+    addText(&emptyHintText, "\uE003 Add new item | \uE001 Back");
+    addText(&filterFolderHintText, "\uE000 Edit item | \uE005/\uE001 Back");
+    addText(&gridOptionText, "Enable grid view");
+    addText(&confirmationText, "Are you sure you want to delete\nthis item?");
+    addText(&deleteText, "\uE002 Delete");
+    addText(&cancelText, "\uE001 Cancel");
+    addText(&confirmText, "\uE000 Confirm");
+    addText(&backText, "\uE01A Back \uE001");
+    addText(&renameText, "Rename");
+    addText(&editTagsText, "Edit tags");
+    addText(&editDescText, "Edit desc.");
+    addText(&newFolderText, "New folder");
+    addText(&deleteFolderText, "Delete");
+    addText(&colorFolderText, "Edit color");
+    addText(&outText, "Out of stock");
+    addText(&sortText, "Sort by");
+    addText(&filterText, "Filter by");
+    addText(&searchText, "Enter search term...");
+    addText(&emptyText, "No items...");
+    addText(&emptyRootText, "Try getting started by adding a folder");
+    addText(&commaText, ",");
+    addText(&quotesText, "\"");
+    addText(&slashText, "/");
+    addText(&hashText, "#");
 
-    addText(&sortTexts[SORT_NONE],     "None");
-    addText(&sortTexts[SORT_QTY_ASC],  "Qty. asc.");
+    addText(&sortTexts[SORT_NONE], "None");
+    addText(&sortTexts[SORT_QTY_ASC], "Qty. asc.");
     addText(&sortTexts[SORT_QTY_DESC], "Qty. desc.");
-    addText(&sortTexts[SORT_NAME_AZ],  "Name A-Z");
-    addText(&sortTexts[SORT_NAME_ZA],  "Name Z-A");
+    addText(&sortTexts[SORT_NAME_AZ], "Name A-Z");
+    addText(&sortTexts[SORT_NAME_ZA], "Name Z-A");
 }
 
 void initRender(C3D_RenderTarget **top, C3D_RenderTarget **bottom) {
@@ -584,6 +586,10 @@ void drawFilterBar(const Inventory *inv, Screen screen) {
 // -----------------------------------------------------------------------------
 
 void drawFolderList(const FolderView *view/*, float scrollOffset*/) {
+    if (view->currentFolder != view->rootFolder) {
+        C2D_DrawText(&backText, 0, TEXT_HPAD, TEXT_VPAD, 0.0f, 0.5f, 0.5f);
+    }
+
     if (isFolderEmpty(view)) {
         C2D_DrawText(&emptyText, 0, TEXT_HPAD, INV_TOP_PAD + TEXT_VPAD, 0.0f, 0.6f, 0.6f);
         if (isEmptyRoot(view)) {
@@ -657,6 +663,19 @@ void drawHintText(Screen screen, bool folderEmpty) {
 
     C2D_DrawText(text, 0, TEXT_HPAD, TEXT_VPAD, 0.0f, 0.5f, 0.5f);
     C2D_DrawRectSolid(0, 2 * TEXT_VPAD + 15.0f, 0.0f, BOTTOM_WIDTH, 1.0f, black);
+}
+
+void drawHamburger(const TouchState *touchState) {
+    bool pressed = touchState->item == TOUCH_BURGER;
+    C2D_DrawRectSolid(BOTTOM_WIDTH - BURGER_SIZE - 1, 0.0f, 0.0f, BURGER_SIZE + 1, BURGER_SIZE + 1, black);
+    C2D_DrawRectSolid(BOTTOM_WIDTH - BURGER_SIZE, 0.0f, 0.0f, BURGER_SIZE, BURGER_SIZE, pressed ? accent : bgColor);
+
+    C2D_DrawRectSolid(BOTTOM_WIDTH - BURGER_SIZE + BURGER_HPAD, BURGER_VPAD, 0.0f, BURGER_SIZE - 2 * BURGER_HPAD - 1,
+                      BURGER_HEIGHT, black);
+    C2D_DrawRectSolid(BOTTOM_WIDTH - BURGER_SIZE + BURGER_HPAD, BURGER_VPAD + BURGER_HEIGHT + BURGER_SPACING, 0.0f,
+                      BURGER_SIZE - 2 * BURGER_HPAD - 1, BURGER_HEIGHT, black);
+    C2D_DrawRectSolid(BOTTOM_WIDTH - BURGER_SIZE + BURGER_HPAD, BURGER_VPAD + 2 * (BURGER_HEIGHT + BURGER_SPACING),
+                      0.0f, BURGER_SIZE - 2 * BURGER_HPAD - 1, BURGER_HEIGHT, black);
 }
 
 void drawDeleteModal(C2D_Text *name) {
@@ -752,28 +771,23 @@ u32 hsvToRgb(float h, float s, float v) {
         r = c;
         g = x;
         b = 0;
-    }
-    else if (h < 120) {
+    } else if (h < 120) {
         r = x;
         g = c;
         b = 0;
-    }
-    else if (h < 180) {
+    } else if (h < 180) {
         r = 0;
         g = c;
         b = x;
-    }
-    else if (h < 240) {
+    } else if (h < 240) {
         r = 0;
         g = x;
         b = c;
-    }
-    else if (h < 300) {
+    } else if (h < 300) {
         r = x;
         g = 0;
         b = c;
-    }
-    else {
+    } else {
         r = c;
         g = 0;
         b = x;
@@ -844,17 +858,36 @@ void drawColorBar(float x, float y, float w, float h, float hue) {
 void drawColorView(const TouchState *touchState) {
     const ColorState *color = &touchState->color;
 
-    C2D_DrawRectSolid(COLOR_X - COLOR_PAD - BORDER, COLOR_Y - COLOR_PAD - BORDER, 0.0f, COLOR_SIZE + COLOR_BAR_WIDTH + 3 * COLOR_PAD + 2 * BORDER, COLOR_SIZE + 2 * COLOR_PAD + 2 * BORDER, accent);
-    C2D_DrawRectSolid(COLOR_X - COLOR_PAD, COLOR_Y - COLOR_PAD, 0.0f, COLOR_SIZE + COLOR_BAR_WIDTH + 3 * COLOR_PAD, COLOR_SIZE + 2 * COLOR_PAD, white);
+    C2D_DrawRectSolid(COLOR_X - COLOR_PAD - BORDER, COLOR_Y - COLOR_PAD - BORDER, 0.0f,
+                      COLOR_SIZE + COLOR_BAR_WIDTH + 3 * COLOR_PAD + 2 * BORDER,
+                      COLOR_SIZE + 2 * COLOR_PAD + 2 * BORDER, accent);
+    C2D_DrawRectSolid(COLOR_X - COLOR_PAD, COLOR_Y - COLOR_PAD, 0.0f, COLOR_SIZE + COLOR_BAR_WIDTH + 3 * COLOR_PAD,
+                      COLOR_SIZE + 2 * COLOR_PAD, white);
     C2D_DrawRectangle(COLOR_X, COLOR_Y, 0.0f, COLOR_SIZE, COLOR_SIZE, white,
                       hsvToRgb(color->hue, 1.0f, 1.0f), black, black);
     drawColorBar(COLOR_X + COLOR_SIZE + COLOR_PAD, COLOR_Y, COLOR_BAR_WIDTH, COLOR_SIZE, color->hue);
 
-    C2D_DrawRectSolid(COLOR_X + color->saturation * COLOR_SIZE - 5.0f, COLOR_Y + (1.0f - color->value) * COLOR_SIZE - 1.0f, 0.0f, 10.0f, 2.0f, white);
-    C2D_DrawRectSolid(COLOR_X + color->saturation * COLOR_SIZE - 1.0f, COLOR_Y + (1.0f - color->value) * COLOR_SIZE - 5.0f, 0.0f, 2.0f, 10.0f, white);
+    C2D_DrawRectSolid(COLOR_X + color->saturation * COLOR_SIZE - 5.0f,
+                      COLOR_Y + (1.0f - color->value) * COLOR_SIZE - 1.0f, 0.0f, 10.0f, 2.0f, white);
+    C2D_DrawRectSolid(COLOR_X + color->saturation * COLOR_SIZE - 1.0f,
+                      COLOR_Y + (1.0f - color->value) * COLOR_SIZE - 5.0f, 0.0f, 2.0f, 10.0f, white);
 
     C2D_DrawText(&cancelText, C2D_AlignCenter, COLOR_CANCEL_X, COLOR_OPT_Y, 0.0f, 0.5f, 0.5f, black);
     C2D_DrawText(&confirmText, C2D_AlignCenter, COLOR_CONFIRM_X, COLOR_OPT_Y, 0.0f, 0.5f, 0.5f, black);
+}
+
+void drawOptionsView(DisplayMode display) {
+    C2D_DrawText(&backText, 0, TEXT_HPAD, TEXT_VPAD, 0.0f, 0.5f, 0.5f);
+    C2D_DrawRectSolid(0, 2 * TEXT_VPAD + 15.0f, 0.0f, BOTTOM_WIDTH, 1.0f, black);
+
+    C2D_DrawRectSolid(OPTIONS_HPAD, OPTIONS_VPAD, 0.0f, OPTION_BOX_SIZE, OPTION_BOX_SIZE, black);
+    if (display == DISPLAY_LIST) {
+        C2D_DrawRectSolid(OPTIONS_HPAD + 2.0f, OPTIONS_VPAD + 2.0f, 0.0f, OPTION_BOX_SIZE - 4.0f,
+                          OPTION_BOX_SIZE - 4.0f, bgColor);
+    }
+
+    C2D_DrawText(&gridOptionText, 0, OPTIONS_HPAD + OPTION_BOX_SIZE + OPTION_TEXT_PAD,
+                 OPTIONS_VPAD + OPTION_BOX_SIZE / 2 - 10.0f, 0.0f, 0.6f, 0.6f, black);
 }
 
 void drawScrollBar(Scroll scroll, float width, float maxHeight, float heightPortion, float x, float y) {
@@ -941,8 +974,9 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
 #endif
 }
 
-void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, const TouchState *touchState,
-                      Scroll filterScroll, const ButtonPresses *presses, const FolderView *view) {
+void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, DisplayMode display,
+                      bool optionScreen, const TouchState *touchState, Scroll filterScroll,
+                      const ButtonPresses *presses, const FolderView *view) {
 #ifndef CONSOLE
     C2D_TargetClear(bottom, bgColor);
 
@@ -951,6 +985,11 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
         TouchState state = *touchState;
         if (presses->incrFrames > 0) state.item = TOUCH_INCR;
         if (presses->decrFrames > 0) state.item = TOUCH_DECR;
+
+        if (optionScreen) {
+            drawOptionsView(display);
+            return;
+        }
 
         switch (screen) {
             case SCREEN_FOLDER:
@@ -997,6 +1036,8 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
             drawRowButtons(&state);
         }
 
+        drawHamburger(touchState);
+
         if (screen == SCREEN_DELETE) {
             drawDeleteModal(&getSelectedItem(inv)->nameText);
         }
@@ -1019,7 +1060,7 @@ void updateColors(void) {
 
 void
 render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Screen screen, DisplayMode display,
-       Scroll listScroll,
+       bool optionScreen, Scroll listScroll,
        Scroll gridScroll, const TouchState *touchState, const ButtonPresses *presses, Scroll filterScroll,
        const FolderView *folderView) {
     bgColor = folderView->currentFolder->color;
@@ -1028,7 +1069,7 @@ render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Sc
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
     drawTopScreen(top, inv, screen, display, listScroll, gridScroll, folderView, touchState);
-    drawBottomScreen(bottom, inv, screen, touchState, filterScroll, presses, folderView);
+    drawBottomScreen(bottom, inv, screen, display, optionScreen, touchState, filterScroll, presses, folderView);
 
     C3D_FrameEnd(0);
 }

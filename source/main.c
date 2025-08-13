@@ -38,14 +38,16 @@ int main() {
            filterScroll = {0.0f, 0.0f},
            gridScroll = {0.0f, 0.0f};
 
+    bool optionScreen = false;
+
     while (aptMainLoop()) {
         hidScanInput();
         u32 kDown = hidKeysDown();
 
         if (kDown & KEY_START) break;
 
-        updateUi(&screen, &display, &touchState, &inv, &folderView, &listScroll, &gridScroll, &presses, &filterScroll);
-        render(top, bottom, &inv, screen, display, listScroll, gridScroll, &touchState, &presses, filterScroll, &folderView);
+        updateUi(&screen, &display, &optionScreen, &touchState, &inv, &folderView, &listScroll, &gridScroll, &presses, &filterScroll);
+        render(top, bottom, &inv, screen, display, optionScreen, listScroll, gridScroll, &touchState, &presses, filterScroll, &folderView);
     }
 
     saveInventory(&inv);

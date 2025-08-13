@@ -16,6 +16,8 @@ typedef enum {
     TOUCH_INCR,
     TOUCH_DECR,
     TOUCH_QTY,
+    TOUCH_BURGER,
+    TOUCH_GRID_OPTION,
     TOUCH_RENAME,
     TOUCH_TAGS,
     TOUCH_DESC,
@@ -82,5 +84,5 @@ typedef struct {
     bool filters[MAX_FILTERS];
 } ButtonPresses;
 
-void updateUi(Screen *screen, DisplayMode *display, TouchState *touchState, Inventory *inv, FolderView *view,
+void updateUi(Screen *screen, DisplayMode *display, bool *optionScreen, TouchState *touchState, Inventory *inv, FolderView *view,
               Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses, Scroll *filterScroll);
