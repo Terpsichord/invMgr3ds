@@ -18,7 +18,7 @@ void initInventory(Inventory *inv) {
     inv->selectedIdx = 0;
 
     memset(inv->filters, 0, sizeof(inv->filters));
-    inv->numFilters = 0;
+    inv->numSelectedFilters = 0;
     inv->sortOrder = SORT_NONE;
 
     inv->numFiltered = 0;
@@ -202,7 +202,7 @@ void sortFilteredIndices(Inventory *inv) {
     }
 }
 
-int inventoryAvailableFilters(const Inventory *inv) {
+int inventoryNumFilters(const Inventory *inv) {
     return inv->numTags + inv->numFolders + 1;
 }
 
@@ -232,17 +232,17 @@ static bool checkFolderFilter(const Inventory *inv, const Item *item, Folder *fi
 
 void updateFilteredIndices(Inventory *inv, bool pressedFilters[MAX_FILTERS]) {
     if (pressedFilters != NULL) {
-        inv->numFilters = 0;
-        for (int i = 0; i < inventoryAvailableFilters(inv); i++) {
+        inv->numSelectedFilters = 0;
+        for (int i = 0; i < inventoryNumFilters(inv); i++) {
             if (pressedFilters[i]) {
-                inv->filters[inv->numFilters++] = i;
+                inv->filters[inv->numSelectedFilters++] = i;
             }
         }
     }
 
     inv->numFiltered = 0;
     for (int i = 0; i < inv->numItems; i++) {
-        for (int j = 0; j < inv->numFilters; j++) {
+        for (int j = 0; j < inv->numSelectedFilters; j++) {
             if (inv->filters[j] <= inv->numTags) {
                 if (!checkTagFilter(inv, &inv->items[i], inv->filters[j])) {
                     goto noMatch;
@@ -296,9 +296,9 @@ void updateSortOrder(Inventory *inv, bool changedOrder) {
 }
 
 void addInventoryFilter(Inventory *inv, int filter) {
-    if (inv->numFilters >= MAX_FILTERS) return;
+    if (inv->numSelectedFilters >= MAX_FILTERS) return;
 
-    inv->filters[inv->numFilters++] = filter;
+    inv->filters[inv->numSelectedFilters++] = filter;
 }
 
 int updateInventoryTags(Inventory *inv) {
@@ -317,7 +317,7 @@ int updateInventoryTags(Inventory *inv) {
 }
 
 bool isFiltered(const Inventory *inv) {
-    return inv->numFilters > 0 || inv->sortOrder != SORT_NONE || hasQuery(inv) || inv->numFolderFilters > 0;
+    return inv->numSelectedFilters > 0 || inv->sortOrder != SORT_NONE || hasQuery(inv) || inv->numFolderFilters > 0;
 }
 
 int getItemIdx(const Inventory *inv, int i) {

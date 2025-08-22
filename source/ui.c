@@ -191,10 +191,10 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
             state->color.held = true;
         }
 
-        if (item == TOUCH_FILTER && state->itemIdx < inventoryAvailableFilters(inv)) {
+        if (item == TOUCH_FILTER && state->itemIdx < inventoryNumFilters(inv)) {
             presses->filters[state->itemIdx] = !presses->filters[state->itemIdx];
             updateFilteredIndices(inv, presses->filters);
-        } else if (item == TOUCH_FILTER_TAG && state->itemIdx < inventoryAvailableFilters(inv)) {
+        } else if (item == TOUCH_FILTER_TAG && state->itemIdx < inventoryNumFilters(inv)) {
             presses->heldFilterTag = state->itemIdx;
         } else if (item == TOUCH_SORT) {
             if (inv->sortOrder != state->itemIdx) {
@@ -720,7 +720,7 @@ void updateScroll(Scroll *listScroll, Scroll *gridScroll, Inventory *inv, Scroll
     gridScroll->offset = MIN(gridScroll->offset, gridScroll->max);
     gridScroll->offset = MAX(0.0f, gridScroll->offset);
 
-    filterScroll->max = (inventoryAvailableFilters(inv) + 1) * BOX_SPACING - BOX_AREA_HEIGHT;
+    filterScroll->max = (inventoryNumFilters(inv) + 1) * BOX_SPACING - BOX_AREA_HEIGHT;
     filterScroll->offset = MIN(filterScroll->offset, filterScroll->max);
     filterScroll->offset = MAX(0.0f, filterScroll->offset);
 

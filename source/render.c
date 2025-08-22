@@ -3,6 +3,7 @@
 #include "inventory.h"
 #include "layout.h"
 #include "render.h"
+#include "text.h"
 
 //#define CONSOLE 1
 //#define CONSOLE_TOP 1
@@ -10,10 +11,6 @@
 
 
 u32 white, lightGray, gray, darkGray, black, darkenScreen, accent, darkAccent, lightAccent, scrollGray, lowBatteryColor;
-C2D_TextBuf staticTextBuf;
-C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, folderHintText, emptyHintText, filterFolderHintText, gridOptionText, confirmationText,
-        deleteText, cancelText, confirmText, backText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, colorFolderText, outText, sortText, filterText,
-        searchText, emptyText, emptyRootText, commaText, quotesText, slashText, hashText, sortTexts[NUM_SORTS];
 
 static u32 bgColor;
 
@@ -93,54 +90,6 @@ void initColors(void) {
     folderColors[19] = C2D_Color32(0xD2, 0xF0, 0xDC, 0xFF);
 }
 
-static void addText(C2D_Text *text, const char *str) {
-    C2D_TextParse(text, staticTextBuf, str);
-    C2D_TextOptimize(text);
-}
-
-void initText(void) {
-    staticTextBuf = C2D_TextBufNew(1024);
-
-    addText(&nameText, "Name");
-    addText(&qtyText, "Qty.");
-    addText(&tagsText, "Tags");
-    addText(&descText, "Description");
-    addText(&viewHintText, "\uE000 Edit | \uE002 Copy | \uE003 Add | \uE005 Filter | \uE001 Back");
-    addText(&editHintText, "\uE07D Adjust quantity | \uE002 Delete | \uE000/\uE001 Back");
-    addText(&filterHintText, "\uE07D Change sort order | \uE005/\uE001 Back");
-    addText(&folderHintText, "\uE000 Open folder | \uE005 Filter items | \uE001 Back");
-    addText(&emptyHintText, "\uE003 Add new item | \uE001 Back");
-    addText(&filterFolderHintText, "\uE000 Edit item | \uE005/\uE001 Back");
-    addText(&gridOptionText, "Enable grid view");
-    addText(&confirmationText, "Are you sure you want to delete\nthis item?");
-    addText(&deleteText, "\uE002 Delete");
-    addText(&cancelText, "\uE001 Cancel");
-    addText(&confirmText, "\uE000 Confirm");
-    addText(&backText, "\uE01A Back \uE001");
-    addText(&renameText, "Rename");
-    addText(&editTagsText, "Edit tags");
-    addText(&editDescText, "Edit desc.");
-    addText(&newFolderText, "New folder");
-    addText(&deleteFolderText, "Delete");
-    addText(&colorFolderText, "Edit color");
-    addText(&outText, "Out of stock");
-    addText(&sortText, "Sort by");
-    addText(&filterText, "Filter by");
-    addText(&searchText, "Enter search term...");
-    addText(&emptyText, "No items...");
-    addText(&emptyRootText, "Try getting started by adding a folder");
-    addText(&commaText, ",");
-    addText(&quotesText, "\"");
-    addText(&slashText, "/");
-    addText(&hashText, "#");
-
-    addText(&sortTexts[SORT_NONE], "None");
-    addText(&sortTexts[SORT_QTY_ASC], "Qty. asc.");
-    addText(&sortTexts[SORT_QTY_DESC], "Qty. desc.");
-    addText(&sortTexts[SORT_NAME_AZ], "Name A-Z");
-    addText(&sortTexts[SORT_NAME_ZA], "Name Z-A");
-}
-
 void initRender(C3D_RenderTarget **top, C3D_RenderTarget **bottom) {
     initGfx(top, bottom);
     initColors();
@@ -148,8 +97,6 @@ void initRender(C3D_RenderTarget **top, C3D_RenderTarget **bottom) {
 }
 
 void cleanupRender(void) {
-    C2D_TextBufDelete(staticTextBuf);
-
     C2D_Fini();
     C3D_Fini();
     gfxExit();
@@ -409,14 +356,14 @@ void drawFilterView(const Inventory *inv, ButtonPresses *presses, float scroll) 
     float hashWidth;
     C2D_TextGetDimensions(&hashText, 0.5f, 0.5f, &hashWidth, NULL);
 
-    for (int i = 0; i < inventoryAvailableFilters(inv); i++) {
+    for (int i = 0; i < inventoryNumFilters(inv); i++) {
         if (BOX_SPACING * (i + 1) - VIEW_VPAD - scroll + 2 * FILTER_VPAD < 0 ||
             BOX_SPACING * i - scroll > BOX_AREA_HEIGHT - VIEW_VPAD - 2 * FILTER_VPAD - BORDER)
             continue;
 
         float x = BOX_X + BOX_SIZE + 2 * FILTER_HPAD;
 
-        float tagBgHeight = 30.0f * 0.5f + TEXT_VPAD, width;
+        float width;
         C2D_TextGetDimensions(getFilterText(inv, i), 0.5f, 0.5f, &width, NULL);
         width += hashWidth * (i > inv->numTags);
 
@@ -424,8 +371,8 @@ void drawFilterView(const Inventory *inv, ButtonPresses *presses, float scroll) 
         if (presses->heldFilterTag == i) {
             if (width > BOX_AREA_WIDTH - 2 * BORDER - 2 * FILTER_HPAD - BOX_SIZE - 2 * FILTER_HPAD) {
                 tagScroll = MAX(presses->tagHeldFrames - FILTER_SCROLL_FRAMES, 0);
-                if (tagScroll > width + FILTER_HPAD) {
-                    presses->tagHeldFrames -= width + FILTER_HPAD + FILTER_SCROLL_FRAMES;
+                if (tagScroll > width + 2 * FILTER_HPAD) {
+                    presses->tagHeldFrames -= width + 2 * FILTER_HPAD;
                 }
                 x -= tagScroll;
             }
@@ -434,9 +381,12 @@ void drawFilterView(const Inventory *inv, ButtonPresses *presses, float scroll) 
         if (i > inv->numTags) {
             C2D_DrawRectSolid(BOX_X + BOX_SIZE + FILTER_HPAD,
                               BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD / 2 - scroll, 0.0f,
-                              width + 2 * FILTER_HPAD, tagBgHeight,
+                              width + 2 * FILTER_HPAD, TAG_BG_HEIGHT,
                               inv->folders[i - inv->numTags - 1]->color);
             C2D_DrawText(&hashText, 0, x, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll, 0.0f, 0.5f, 0.5f);
+            if (tagScroll > 0.0f) {
+                C2D_DrawText(&hashText, 0, x + width + 2 * FILTER_HPAD, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll, 0.0f, 0.5f, 0.5f);
+            }
             x += hashWidth;
         }
 
@@ -447,7 +397,7 @@ void drawFilterView(const Inventory *inv, ButtonPresses *presses, float scroll) 
                          0.0f, 0.5f, 0.5f);
         }
 
-        C2D_DrawRectSolid(BOX_X - FILTER_HPAD, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD / 2 - scroll, 0.0f, BOX_SIZE + 2 * FILTER_HPAD, tagBgHeight, white);
+        C2D_DrawRectSolid(BOX_X - FILTER_HPAD, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD / 2 - scroll, 0.0f, BOX_SIZE + 2 * FILTER_HPAD, TAG_BG_HEIGHT, bgColor);
         C2D_DrawRectSolid(BOX_X, BOX_Y + BOX_SPACING * i - scroll, 0.0f, BOX_SIZE, BOX_SIZE, black);
         if (!presses->filters[i]) {
             C2D_DrawRectSolid(BOX_X + 1, BOX_Y + BOX_SPACING * i + 1 - scroll, 0.0f, BOX_SIZE - 2, BOX_SIZE - 2,
@@ -542,7 +492,37 @@ void drawItemView(const Inventory *inv, bool editing, const TouchState *touchSta
 
 bool showFilterBar(const Inventory *inv, Screen screen) {
     return screen != SCREEN_FOLDER && screen != SCREEN_DELETE_FOLDER &&
-           (inv->numFilters > 0 || inv->sortOrder != SORT_NONE || hasQuery(inv));
+           (inv->numSelectedFilters > 0 || inv->sortOrder != SORT_NONE || hasQuery(inv));
+}
+
+float drawSingleFilter(const Inventory *inv, int filterIdx, float indent, bool final) {
+    float filterWidth, commaWidth, hashWidth, width = 0.0f;
+    C2D_TextGetDimensions(getFilterText(inv, inv->filters[filterIdx]), 0.5f, 0.5f, &filterWidth, NULL);
+    C2D_TextGetDimensions(&commaText, 0.5f, 0.5f, &commaWidth, NULL);
+    C2D_TextGetDimensions(&hashText, 0.5f, 0.5f, &hashWidth, NULL);
+
+    bool isFolder = inv->filters[filterIdx] > inv->numTags;
+    if (isFolder) {
+        C2D_DrawRectSolid(indent - FILTER_HPAD,
+                          SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER + TEXT_VPAD / 2.0f, 0.0f,
+                          filterWidth + hashWidth + 2 * FILTER_HPAD, TAG_BG_HEIGHT,
+                          inv->folders[inv->filters[filterIdx] - inv->numTags - 1]->color);
+        C2D_DrawText(&hashText, 0, indent, SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER + TEXT_VPAD, 0.0f, 0.5f, 0.5f);
+
+        width += hashWidth;
+    }
+
+    C2D_DrawText(getFilterText(inv, inv->filters[filterIdx]), 0, indent + width,
+                 SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER + TEXT_VPAD, 0.0f, 0.5f,
+                 0.5f);
+    width += filterWidth;
+    if (!final) {
+        if (isFolder) width += FILTER_HPAD;
+        C2D_DrawText(&commaText, 0, indent + width, SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER + TEXT_VPAD, 0.0f, 0.5f, 0.5f);
+        width += commaWidth + 2 * TEXT_HPAD;
+    }
+
+    return width;
 }
 
 void drawFilterBar(const Inventory *inv, Screen screen) {
@@ -551,25 +531,16 @@ void drawFilterBar(const Inventory *inv, Screen screen) {
     C2D_DrawRectSolid(0.0f, SCREEN_HEIGHT - BAR_HEIGHT, 0.0f, TOP_WIDTH, BAR_BORDER, black);
     C2D_DrawRectSolid(0.0f, SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER, 0.0f, TOP_WIDTH, BAR_HEIGHT - BAR_BORDER, bgColor);
 
-    float commaWidth, quotesWidth;
-    C2D_TextGetDimensions(&commaText, 0.5f, 0.5f, &commaWidth, NULL);
+    float quotesWidth;
     C2D_TextGetDimensions(&quotesText, 0.5f, 0.5f, &quotesWidth, NULL);
 
-    float width, indent = width + 2 * TEXT_HPAD;
-    if (inv->numFilters > 0) {
-        for (int i = 0; i < inv->numFilters - 1; i++) {
-            C2D_TextGetDimensions(getFilterText(inv, inv->filters[i]), 0.5f, 0.5f, &width, NULL);
-            C2D_DrawText(getFilterText(inv, inv->filters[i]), 0, indent,
-                         SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER + TEXT_VPAD, 0.0f, 0.5f,
-                         0.5f);
+    float indent = 2 * TEXT_HPAD;
+    if (inv->numSelectedFilters > 0) {
+        for (int i = 0; i < inv->numSelectedFilters - 1; i++) {
+            float width = drawSingleFilter(inv, i, indent, false);
             indent += width;
-            C2D_DrawText(&commaText, 0, indent, SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER + TEXT_VPAD, 0.0f, 0.5f, 0.5f);
-            indent += commaWidth + 2 * TEXT_HPAD;
         }
-        C2D_TextGetDimensions(getFilterText(inv, inv->filters[inv->numFilters - 1]), 0.5f, 0.5f, &width, NULL);
-        C2D_DrawText(getFilterText(inv, inv->filters[inv->numFilters - 1]), 0, indent,
-                     SCREEN_HEIGHT - BAR_HEIGHT + BAR_BORDER + TEXT_VPAD, 0.0f, 0.5f,
-                     0.5f);
+        drawSingleFilter(inv, inv->numSelectedFilters - 1, indent, true);
     }
 
     if (inv->sortOrder == SORT_NONE && !hasQuery(inv)) return;

@@ -1,6 +1,5 @@
 #include "ui.h"
 
-extern C2D_Text qtyText, tagsText, outText, sortText, filterText, searchText, commaText, quotesText, sortTexts[NUM_SORTS];
 extern u32 white, lightGray, gray, darkGray, black, columnGray;
 
 void initRender(C3D_RenderTarget **top, C3D_RenderTarget **bottom);

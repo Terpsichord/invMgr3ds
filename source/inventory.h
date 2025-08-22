@@ -47,7 +47,7 @@ typedef struct {
     int numFolders;
 
     int filters[MAX_FILTERS];
-    int numFilters;
+    int numSelectedFilters;
     SortOrder sortOrder;
     char searchQuery[MAX_QUERY];
     C2D_Text searchQueryText;
@@ -85,7 +85,7 @@ int getItemIdx(const Inventory *inv, int i);
 Item *getItem(const Inventory *inv, int i);
 Item *getSelectedItem(const Inventory *inv);
 
-int inventoryAvailableFilters(const Inventory *inv);
+int inventoryNumFilters(const Inventory *inv);
 
 void inventorySetQuantity(Inventory *inv, int quantity);
 void inventoryChangeQuantity(Inventory *inv, int change);
