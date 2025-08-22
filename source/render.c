@@ -952,7 +952,7 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
             } else {
                 drawGrid(inv, view, gridScroll.offset);
                 if (gridScroll.max > 0) {
-                    drawScrollBar(gridScroll, TOP_WIDTH, SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD,
+                    drawScrollBar(gridScroll, TOP_WIDTH, SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD - showFilterBar(inv, screen) * BAR_HEIGHT,
                                   SCREEN_HEIGHT - GRID_VPAD, 0.0f, GRID_VPAD);
                 }
             }

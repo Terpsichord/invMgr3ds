@@ -82,7 +82,8 @@ void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float
                     if (touchPos.px >= BOX_X && touchPos.px < BOX_X + BOX_SIZE) {
                         state->item = TOUCH_FILTER;
                         state->itemIdx = (touchPos.py - BOX_Y + *filterScroll) / BOX_SPACING;
-                    } else if (touchPos.px >= BOX_X + BOX_SIZE + FILTER_HPAD && touchPos.px < BOX_X + BOX_AREA_WIDTH - BORDER) {
+                    } else if (touchPos.px >= BOX_X + BOX_SIZE + FILTER_HPAD &&
+                               touchPos.px < BOX_X + BOX_AREA_WIDTH - BORDER) {
                         state->item = TOUCH_FILTER_TAG;
                         state->itemIdx = (touchPos.py - BOX_Y + *filterScroll) / BOX_SPACING;
                     }
@@ -176,9 +177,24 @@ static void normalizeSpaces(char *str) {
     str[write] = '\0';
 }
 
+static void updateListScroll(Scroll *listScroll, Inventory *inv, Screen screen) {
+    listScroll->offset = MIN(listScroll->offset, ITEM_HEIGHT * inv->selectedIdx);
+    listScroll->offset = MAX(listScroll->offset,
+                             ITEM_HEIGHT * (inv->selectedIdx + 1) - SCREEN_HEIGHT + INV_TOP_PAD +
+                             showFilterBar(inv, screen) * BAR_HEIGHT);
+}
+
+static void updateGridScroll(Scroll *gridScroll, Inventory *inv, Screen screen) {
+    int row = inv->selectedIdx / GRID_COLUMNS;
+    gridScroll->offset = MIN(gridScroll->offset, GRID_SPACING * row);
+    gridScroll->offset = MAX(gridScroll->offset,
+                             GRID_SPACING * (row + 1) - SCREEN_HEIGHT + GRID_VPAD +
+                             showFilterBar(inv, screen) * BAR_HEIGHT);
+}
+
 void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool *optionScreen, Inventory *inv,
                    FolderView *view, ButtonPresses *presses,
-                   float *filterScroll) {
+                   Scroll *listScroll, Scroll *gridScroll, float *filterScroll) {
     static touchPosition prevTouch;
 
     TouchItem item = state->item;
@@ -215,7 +231,13 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
         } else if (item == TOUCH_SEARCH_CLEAR) {
             inventorySearch(inv, "");
         } else if (item == TOUCH_GRID_OPTION) {
-            *display = *display == DISPLAY_LIST ? DISPLAY_GRID : DISPLAY_LIST;
+            if (*display == DISPLAY_LIST) {
+                *display = DISPLAY_GRID;
+                updateGridScroll(gridScroll, inv, *screen);
+            } else {
+                *display = DISPLAY_LIST;
+                updateListScroll(listScroll, inv, *screen);
+            }
         }
     } else if (state->stage == STAGE_HELD) {
         if (presses->filterHeld) {
@@ -486,19 +508,6 @@ void editItem(FolderView *view, Inventory *inv, Screen *screen, Item *item) {
     *screen = SCREEN_EDIT;
 }
 
-static void updateListScroll(Scroll *listScroll, Inventory *inv, Screen screen) {
-    listScroll->offset = MIN(listScroll->offset, ITEM_HEIGHT * inv->selectedIdx);
-    listScroll->offset = MAX(listScroll->offset,
-                             ITEM_HEIGHT * (inv->selectedIdx + 1) - SCREEN_HEIGHT + INV_TOP_PAD +
-                             showFilterBar(inv, screen) * BAR_HEIGHT);
-}
-
-static void updateGridScroll(Scroll *gridScroll, Inventory *inv) {
-    int row = inv->selectedIdx / GRID_COLUMNS;
-    gridScroll->offset = MIN(gridScroll->offset, GRID_SPACING * row);
-    gridScroll->offset = MAX(gridScroll->offset,
-                             GRID_SPACING * (row + 1) - SCREEN_HEIGHT + GRID_VPAD);
-}
 
 void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, FolderView *view, bool *optionScreen,
                      Scroll *listScroll,
@@ -555,7 +564,7 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
                 }
 
                 if (kDown & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN)) {
-                    updateGridScroll(gridScroll, inv);
+                    updateGridScroll(gridScroll, inv, *screen);
                 }
             }
 
@@ -584,13 +593,13 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
                     refreshItemTags(inv, getSelectedItem(inv));
 
                     updateListScroll(listScroll, inv, *screen);
-                    updateGridScroll(gridScroll, inv);
+                    updateGridScroll(gridScroll, inv, *screen);
                 }
             }
             if (kDown & KEY_Y) {
                 addItem(inv, view->currentFolder);
                 updateListScroll(listScroll, inv, *screen);
-                updateGridScroll(gridScroll, inv);
+                updateGridScroll(gridScroll, inv, *screen);
             }
             if (kDown & KEY_B) {
                 folderViewNavigateParent(view);
@@ -716,7 +725,9 @@ void updateScroll(Scroll *listScroll, Scroll *gridScroll, Inventory *inv, Scroll
     listScroll->offset = MIN(listScroll->offset, listScroll->max);
     listScroll->offset = MAX(0.0f, listScroll->offset);
 
-    gridScroll->max = (numShownItems(inv) + GRID_COLUMNS - 1) / GRID_COLUMNS * GRID_SPACING - SCREEN_HEIGHT + GRID_VPAD;
+    gridScroll->max =
+            (numShownItems(inv) + GRID_COLUMNS - 1) / GRID_COLUMNS * GRID_SPACING - SCREEN_HEIGHT + GRID_VPAD +
+            showFilterBar(inv, SCREEN_VIEW) * BAR_HEIGHT;
     gridScroll->offset = MIN(gridScroll->offset, gridScroll->max);
     gridScroll->offset = MAX(0.0f, gridScroll->offset);
 
@@ -730,7 +741,7 @@ void updateUi(Screen *screen, DisplayMode *display, bool *optionScreen, TouchSta
               FolderView *view,
               Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses, Scroll *filterScroll) {
     updateTouchState(touchState, *screen, *optionScreen, &filterScroll->offset, hasQuery(inv), isFolderEmpty(view));
-    updateUiTouch(touchState, screen, display, optionScreen, inv, view, presses, &filterScroll->offset);
+    updateUiTouch(touchState, screen, display, optionScreen, inv, view, presses, listScroll, gridScroll, &filterScroll->offset);
     updateUiButtons(screen, *display, inv, view, optionScreen, listScroll, gridScroll, presses, touchState->prevScreen);
     updateScroll(listScroll, gridScroll, inv, filterScroll);
 }
