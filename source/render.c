@@ -181,7 +181,7 @@ void drawItemList(const Inventory *inv, const FolderView *view, float scrollOffs
     }
 }
 
-void drawGrid(const Inventory *inv, const FolderView *view, float scrollOffset) {
+void drawItemGrid(const Inventory *inv, const FolderView *view, float scrollOffset) {
     if (numShownItems(inv) == 0) return;
 
     for (int i = 0; i < (numShownItems(inv) + GRID_COLUMNS - 1) / GRID_COLUMNS; i++) {
@@ -305,12 +305,12 @@ static void drawSelected(const Item *item, bool editing, const TouchState *touch
         C2D_DrawRectSolid(VIEW_HPAD + BORDER, VIEW_VPAD + VIEW_TOP_PAD + BORDER, 0.0f,
                           BOTTOM_WIDTH - 2 * VIEW_HPAD - 2 * BORDER,
                           SCREEN_HEIGHT - 2 * VIEW_VPAD - 2 * BORDER - VIEW_TOP_PAD, bgColor);
-
-        float w, h;
-        C2D_TextGetDimensions(&item->nameText, 0.6f, 0.6f, &w, &h);
-        C2D_DrawRectSolid(VIEW_HPAD + BORDER + TEXT_HPAD, VIEW_TOP_PAD, 0.0f, w + 2 * TEXT_HPAD, h + 2 * TEXT_VPAD,
-                          bgColor);
     }
+
+    float w, h;
+    C2D_TextGetDimensions(&item->nameText, 0.6f, 0.6f, &w, &h);
+    C2D_DrawRectSolid(VIEW_HPAD + BORDER + TEXT_HPAD, VIEW_TOP_PAD, 0.0f, w + 2 * TEXT_HPAD, h + 2 * TEXT_VPAD,
+                      bgColor);
 
     C2D_DrawText(&item->nameText, 0, VIEW_HPAD + BORDER + 2 * TEXT_HPAD, VIEW_TOP_PAD, 0.0f, 0.6f, 0.6f);
     C2D_DrawText(&item->descText, C2D_WordWrap, DESC_X, DESC_Y, 0.0f, 0.55f, 0.55f, DESC_WIDTH);
@@ -441,6 +441,85 @@ void drawFilterView(const Inventory *inv, ButtonPresses *presses, float scroll) 
                       accent);
     C2D_DrawRectSolid(BOX_AREA_X, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT, 0.0f, BOX_AREA_WIDTH, SCREEN_HEIGHT,
                       bgColor);
+}
+
+void drawTagsView(const Inventory *inv, const TouchState *touchState, ButtonPresses *presses, float scroll) {
+    float hashWidth;
+    C2D_TextGetDimensions(&hashText, 0.5f, 0.5f, &hashWidth, NULL);
+
+    for (int i = 0; i < inv->numTags; i++) {
+        if (BOX_SPACING * (i + 1) - VIEW_VPAD - scroll + 2 * FILTER_VPAD < 0 ||
+            BOX_SPACING * i - scroll > BOX_AREA_HEIGHT - VIEW_VPAD - 2 * FILTER_VPAD - BORDER)
+            continue;
+
+        int filterIdx = i + 1;
+
+        float x = VIEW_HPAD + BORDER + BOX_SIZE + 3 * FILTER_HPAD;
+
+        float width;
+        C2D_TextGetDimensions(getFilterText(inv, filterIdx), 0.5f, 0.5f, &width, NULL);
+        width += hashWidth * (i > inv->numTags);
+
+        float tagScroll = 0.0f;
+        if (presses->heldFilterTag == i) {
+            if (width > BOTTOM_WIDTH - 2 * VIEW_HPAD - 2 * BORDER - 2 * FILTER_HPAD - BOX_SIZE - 2 * FILTER_HPAD) {
+                tagScroll = MAX(presses->tagHeldFrames - FILTER_SCROLL_FRAMES, 0);
+                if (tagScroll > width + 2 * FILTER_HPAD) {
+                    presses->tagHeldFrames -= width + 2 * FILTER_HPAD;
+                }
+                x -= tagScroll;
+            }
+        }
+
+        C2D_DrawText(getFilterText(inv, filterIdx), 0, x, BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll,
+                     0.0f, 0.5f, 0.5f);
+        if (tagScroll > 0.0f) {
+            C2D_DrawText(getFilterText(inv, filterIdx), 0, x + width + 2 * FILTER_HPAD,
+                         BOX_Y + BOX_SPACING * i - FILTER_VPAD + TEXT_VPAD - scroll,
+                         0.0f, 0.5f, 0.5f);
+        }
+
+        C2D_DrawRectSolid(TAG_BOX_X, BOX_Y + BOX_SPACING * i - scroll, 0.0f, BOX_SIZE, BOX_SIZE, black);
+
+        if (!checkTagFilter(inv, getSelectedItem(inv), filterIdx)) {
+            C2D_DrawRectSolid(TAG_BOX_X + 1, BOX_Y + BOX_SPACING * i + 1 - scroll, 0.0f, BOX_SIZE - 2, BOX_SIZE - 2,
+                              bgColor);
+        }
+    }
+
+
+    float w, h;
+    C2D_TextGetDimensions(&getSelectedItem(inv)->nameText, 0.6f, 0.6f, &w, &h);
+    C2D_DrawRectSolid(VIEW_HPAD + BORDER + TEXT_HPAD, VIEW_TOP_PAD, 0.0f, w + 2 * TEXT_HPAD, h + 2 * TEXT_VPAD,
+                      bgColor);
+
+    C2D_DrawText(&getSelectedItem(inv)->nameText, 0, VIEW_HPAD + BORDER + 2 * TEXT_HPAD, VIEW_TOP_PAD, 0.0f, 0.6f, 0.6f);
+
+    // covers
+    C2D_DrawRectSolid(VIEW_HPAD + BORDER + 3 * TEXT_HPAD + w, VIEW_TOP_PAD + VIEW_VPAD, 0.0f,
+                      BOTTOM_WIDTH, BORDER, accent);
+    C2D_DrawRectSolid(VIEW_HPAD + BORDER + 3 * TEXT_HPAD + w, VIEW_TOP_PAD + VIEW_VPAD + BORDER, 0.0f,
+                      BOTTOM_WIDTH, h + 2 * TEXT_VPAD - VIEW_VPAD - BORDER, bgColor);
+    C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BORDER, BOX_AREA_HEIGHT, accent);
+    C2D_DrawRectSolid(BOTTOM_WIDTH - VIEW_HPAD - BORDER, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BORDER, BOX_AREA_HEIGHT,
+                      accent);
+    C2D_DrawRectSolid(BOTTOM_WIDTH - VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BOTTOM_WIDTH, SCREEN_HEIGHT,
+                      bgColor);
+    C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT - BORDER, 0.0f, BOTTOM_WIDTH - 2 * VIEW_HPAD, BORDER,
+                      accent);
+    C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT, 0.0f, BOTTOM_WIDTH - 2 * VIEW_HPAD, SCREEN_HEIGHT,
+                      bgColor);
+
+    float btnWidth = RENAME_FOLDER_X - NEW_FOLDER_X + FOLDER_BTN_WIDTH;
+    C2D_DrawRectSolid(NEW_FOLDER_X, ROW_BTN_Y, 0.0f, btnWidth, ROW_BTN_HEIGHT,
+                      touchState->item == TOUCH_TAGS_ADD ? darkGray : accent);
+    C2D_DrawText(&tagsAddText, C2D_AlignCenter | C2D_WithColor, NEW_FOLDER_X + btnWidth / 2,
+                 ROW_BTN_Y + 2 * TEXT_VPAD, 0.0f, 0.5f, 0.5f, touchState->item == TOUCH_TAGS_ADD ? white : black);
+
+    C2D_DrawRectSolid(COLOR_FOLDER_X, ROW_BTN_Y, 0.0f, btnWidth, ROW_BTN_HEIGHT,
+                      touchState->item == TOUCH_TAGS_MANUAL ? darkGray : accent);
+    C2D_DrawText(&tagsManualText, C2D_AlignCenter | C2D_WithColor, COLOR_FOLDER_X + btnWidth / 2,
+                 ROW_BTN_Y + 2 * TEXT_VPAD, 0.0f, 0.5f, 0.5f, touchState->item == TOUCH_TAGS_MANUAL ? white : black);
 }
 
 void drawCross(float x, float y, float size, float t, u32 color) {
@@ -626,6 +705,60 @@ void drawFolderList(const FolderView *view/*, float scrollOffset*/) {
     }
 }
 
+void drawFolderGrid(const FolderView *view, float scrollOffset) {
+    if (isFolderEmpty(view)) {
+        C2D_DrawText(&emptyText, 0, TEXT_HPAD, INV_TOP_PAD + TEXT_VPAD, 0.0f, 0.6f, 0.6f);
+        if (isEmptyRoot(view)) {
+            C2D_DrawText(&emptyRootText, 0, TEXT_HPAD, INV_TOP_PAD + TEXT_VPAD + 30.0f * 0.6f, 0.0f, 0.6f, 0.6f);
+        }
+        return;
+    }
+
+    int numFolders = view->currentFolder->numChildren;
+    for (int i = 0; i < (numFolders + GRID_COLUMNS - 1) / GRID_COLUMNS; i++) {
+        for (int j = 0; j < GRID_COLUMNS; j++) {
+            int idx = i * GRID_COLUMNS + j;
+            if (idx >= numFolders ||
+                GRID_VPAD + GRID_SPACING * i - scrollOffset > SCREEN_HEIGHT ||
+                GRID_VPAD + GRID_SPACING * (i + 1) - scrollOffset < 0)
+                continue;
+
+            Folder *folder = view->currentFolder->children[idx];
+
+            C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j,
+                              GRID_VPAD + GRID_SPACING * i - scrollOffset,
+                              0.0f, GRID_TILE_SIZE, GRID_TILE_SIZE,
+                              folder->color);
+
+            float width, height, scale;
+            C2D_TextGetDimensions(&folder->text, 1.0f, 1.0f, &width, &height);
+            scale = (GRID_TILE_SIZE - 2 * GRID_BORDER - 2 * TEXT_HPAD) / width;
+            scale = MIN(scale, 0.7f);
+
+            C2D_DrawText(&folder->text, C2D_WithColor | C2D_AlignCenter,
+                         GRID_HPAD + GRID_SPACING * j + GRID_TILE_SIZE / 2,
+                         GRID_VPAD + GRID_SPACING * i - scrollOffset + GRID_TILE_SIZE / 2 - height * scale / 2,
+                         0.0f, scale, scale, black);
+
+            // Selection border
+            if (view->selectedIdx == idx) {
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset, 0.0f,
+                                  GRID_TILE_SIZE, GRID_BORDER, darkAccent);
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset,
+                                  0.0f, GRID_BORDER, GRID_TILE_SIZE, darkAccent);
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j + GRID_TILE_SIZE - GRID_BORDER,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset,
+                                  0.0f, GRID_BORDER, GRID_TILE_SIZE, darkAccent);
+                C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j,
+                                  GRID_VPAD + GRID_SPACING * i - scrollOffset + GRID_TILE_SIZE - GRID_BORDER,
+                                  0.0f, GRID_TILE_SIZE, GRID_BORDER, darkAccent);
+            }
+        }
+    }
+}
+
 void drawHeaders(u32 bgColor) {
     C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, TOP_WIDTH, INV_TOP_PAD, bgColor);
 
@@ -653,6 +786,9 @@ void drawHintText(Screen screen, bool folderEmpty) {
         case SCREEN_EDIT:
         case SCREEN_DELETE:
             text = &editHintText;
+            break;
+        case SCREEN_TAGS:
+            text = &backText;
             break;
         case SCREEN_FILTER:
             text = &filterHintText;
@@ -954,7 +1090,11 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
     {
         if (screen == SCREEN_FOLDER || screen == SCREEN_DELETE_FOLDER ||
             (screen == SCREEN_COLOR && touchState->prevScreen == SCREEN_FOLDER)) {
-            drawFolderList(view/*, scroll.offset*/);
+            if (display == DISPLAY_LIST) {
+                drawFolderList(view/*, scroll.offset*/);
+            } else {
+                drawFolderGrid(view, gridScroll.offset);
+            }
         } else {
             if (display == DISPLAY_LIST) {
                 drawItemList(inv, view, listScroll.offset);
@@ -966,7 +1106,7 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
                                   INV_TOP_PAD + TEXT_VPAD);
                 }
             } else {
-                drawGrid(inv, view, gridScroll.offset);
+                drawItemGrid(inv, view, gridScroll.offset);
                 if (gridScroll.max > 0) {
                     drawScrollBar(gridScroll, TOP_WIDTH,
                                   SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD - showFilterBar(inv, screen) * BAR_HEIGHT,
@@ -1028,6 +1168,13 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
             case SCREEN_DELETE:
                 if (numShownItems(inv) > 0) {
                     drawItemView(inv, screen == SCREEN_EDIT || screen == SCREEN_DELETE, &state);
+                }
+                break;
+            case SCREEN_TAGS:
+                drawTagsView(inv, &state, presses, filterScroll.offset);
+                if (filterScroll.max > 0.0f) {
+                    drawScrollBar(filterScroll, BOX_AREA_WIDTH - BORDER, BOX_AREA_HEIGHT - 0.6 * 30.0f - 2 * TEXT_VPAD,
+                                  BOX_AREA_HEIGHT, BOX_AREA_X, VIEW_TOP_PAD + 0.6 * 30.0f + 2 * TEXT_VPAD);
                 }
                 break;
             case SCREEN_COLOR:

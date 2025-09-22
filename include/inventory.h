@@ -73,10 +73,16 @@ int numShownItems(const Inventory *inv);
 int addInventoryItem(Inventory *inv, const char *name, const char *desc, int quantity, const Folder *folders[MAX_FOLDERS], int numFolders);
 void removeInventoryItem(Inventory *inv, int idx);
 
+void addInventoryItemTags(Inventory *inv, int idx, const char *tags[], int numTags);
+void removeInventoryItemTag(Inventory *inv, int idx, int tagIdx);
+
+void addNewTag(Inventory *inv, const char *tag);
+
 int inventoryAddFolders(Inventory *inv, Folder *folders[MAX_FOLDERS], int numFolders);
 
 void inventorySearch(Inventory *inv, const char *query);
 bool hasQuery(const Inventory *inv);
+bool checkTagFilter(const Inventory *inv, const Item *item, int filter);
 bool folderHasItems(const Inventory *inv, const Folder *folder);
 void deleteSelectedFolder(FolderView *view, Inventory *inv);
 bool isFiltered(const Inventory *inv);
@@ -102,3 +108,4 @@ void addInventoryFilter(Inventory *inv, int filter);
 void inventorySetFolderFilter(Inventory *inv, Folder *folder);
 
 SwkbdCallbackResult validateTagInput(void *user, const char **message, const char *text, size_t textLen);
+SwkbdCallbackResult validateSingleTagInput(void *user, const char **message, const char *text, size_t textLen);

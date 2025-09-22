@@ -206,7 +206,7 @@ int inventoryNumFilters(const Inventory *inv) {
     return inv->numTags + inv->numFolders + 1;
 }
 
-static bool checkTagFilter(const Inventory *inv, const Item *item, int filter) {
+bool checkTagFilter(const Inventory *inv, const Item *item, int filter) {
     if (filter == 0) {
         return item->quantity == 0;
     }
@@ -389,6 +389,16 @@ void removeInventoryItem(Inventory *inv, int idx) {
     }
 }
 
+void removeInventoryItemTag(Inventory *inv, int idx, int tagIdx) {
+    Item *item = &inv->items[idx];
+    item->numTags--;
+    for (int i = tagIdx; i < item->numTags; i++) {
+        strncpy(item->tags[i], item->tags[i + 1], MAX_TAG_LEN - 1);
+    }
+    updateInventoryTags(inv);
+    updateInventoryText(inv);
+}
+
 void addInventoryItemTags(Inventory *inv, int idx, const char *tags[], int numTags) {
     Item *item = &inv->items[idx];
     for (int i = 0; i < numTags; i++) {
@@ -399,6 +409,10 @@ void addInventoryItemTags(Inventory *inv, int idx, const char *tags[], int numTa
 
     updateInventoryTags(inv);
     updateInventoryText(inv);
+}
+
+void addNewTag(Inventory *inv, const char *tag) {
+    addInventoryItemTags(inv, inv->selectedIdx, &tag, 1);
 }
 
 void inventorySearch(Inventory *inv, const char *query) {
@@ -507,6 +521,22 @@ SwkbdCallbackResult validateTagInput(void *user, const char **message, const cha
         }
         i = j;
     }
+    return SWKBD_CALLBACK_OK;
+}
+
+SwkbdCallbackResult validateSingleTagInput(void *user, const char **message, const char *text, size_t textLen) {
+    for (size_t i = 0; i < textLen; i++) {
+        if (text[i] == ' ') {
+            *message = "Tag cannot have spaces";
+            return SWKBD_CALLBACK_CONTINUE;
+        }
+
+        if (text[i] == '#') {
+            *message = "Tag cannot contain #";
+            return SWKBD_CALLBACK_CONTINUE;
+        }
+    }
+
     return SWKBD_CALLBACK_OK;
 }
 

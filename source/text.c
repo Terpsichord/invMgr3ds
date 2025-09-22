@@ -1,7 +1,7 @@
 #include "text.h"
 
 C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, folderHintText, emptyHintText, filterFolderHintText, gridOptionText, confirmationText,
-        deleteText, cancelText, confirmText, backText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, colorFolderText, outText, sortText, filterText,
+        deleteText, cancelText, confirmText, backText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, tagsAddText, tagsManualText, colorFolderText, outText, sortText, filterText,
         searchText, emptyText, emptyRootText, takePhotoText, lButtonText, cameraText, commaText, quotesText, slashText, hashText, sortTexts[NUM_SORTS];
 static C2D_TextBuf staticTextBuf;
 
@@ -34,6 +34,8 @@ void initText(void) {
     addText(&editDescText, "Edit desc.");
     addText(&newFolderText, "New folder");
     addText(&deleteFolderText, "Delete");
+    addText(&tagsAddText, "Add new tag");
+    addText(&tagsManualText, "Edit tags manually");
     addText(&colorFolderText, "Edit color");
     addText(&outText, "Out of stock");
     addText(&sortText, "Sort by");

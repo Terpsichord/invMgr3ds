@@ -22,6 +22,8 @@ typedef enum {
     TOUCH_GRID_OPTION,
     TOUCH_RENAME,
     TOUCH_TAGS,
+    TOUCH_TAGS_ADD,
+    TOUCH_TAGS_MANUAL,
     TOUCH_DESC,
     TOUCH_DELETE,
     TOUCH_SORT,
@@ -54,6 +56,7 @@ typedef struct {
 typedef enum {
     SCREEN_VIEW,
     SCREEN_EDIT,
+    SCREEN_TAGS,
     SCREEN_FILTER,
     SCREEN_DELETE,
     SCREEN_FOLDER,

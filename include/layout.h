@@ -77,6 +77,8 @@
 #define BOX_AREA_WIDTH   ((BOTTOM_WIDTH) - (VIEW_HPAD) - (BOX_AREA_X))
 #define BOX_AREA_HEIGHT  (SORT_HEIGHT)
 
+#define TAG_BOX_X        ((VIEW_HPAD) + (BORDER) + (FILTER_HPAD))
+
 #define TAG_BG_HEIGHT    30.0f * 0.5f + (TEXT_VPAD)
 
 #define SEARCH_X         (VIEW_HPAD)

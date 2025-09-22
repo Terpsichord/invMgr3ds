@@ -69,6 +69,34 @@ void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float
                     state->item = TOUCH_DELETE;
                 }
             }
+        } else if (screen == SCREEN_TAGS) {
+            if (touchPos.px >= VIEW_HPAD + BORDER && touchPos.px < BOTTOM_WIDTH - VIEW_HPAD - BORDER) {
+                if (touchPos.py >= VIEW_TOP_PAD + VIEW_VPAD &&
+                    touchPos.py < VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT) {
+                    state->item = TOUCH_FILTER_BOX;
+                }
+            }
+
+            if (touchPos.py >= BOX_Y && touchPos.py < BOX_Y + BOX_AREA_HEIGHT) {
+                if (fmodf(touchPos.py - BOX_Y + *filterScroll, BOX_SPACING) <= BOX_SIZE) {
+                    if (touchPos.px >= TAG_BOX_X && touchPos.px < TAG_BOX_X + BOX_SIZE) {
+                        state->item = TOUCH_FILTER;
+                        state->itemIdx = (touchPos.py - BOX_Y + *filterScroll) / BOX_SPACING;
+                    } else if (touchPos.px >= TAG_BOX_X + BOX_SIZE + FILTER_HPAD &&
+                               touchPos.px < BOTTOM_WIDTH - VIEW_HPAD - BORDER) {
+                        state->item = TOUCH_FILTER_TAG;
+                        state->itemIdx = (touchPos.py - BOX_Y + *filterScroll) / BOX_SPACING;
+                    }
+                }
+            }
+
+            if (touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT) {
+                if (touchPos.px >= NEW_FOLDER_X && touchPos.px < RENAME_FOLDER_X + FOLDER_BTN_WIDTH) {
+                    state->item = TOUCH_TAGS_ADD;
+                } else if (touchPos.px >= COLOR_FOLDER_X && touchPos.px < DELETE_FOLDER_X + FOLDER_BTN_WIDTH) {
+                    state->item = TOUCH_TAGS_MANUAL;
+                }
+            }
         } else if (screen == SCREEN_FILTER || screen == SCREEN_FILTER_FOLDER) {
             if (touchPos.px >= BOX_AREA_X && touchPos.px < BOX_AREA_X + BOX_AREA_WIDTH) {
                 if (touchPos.py >= VIEW_TOP_PAD + VIEW_VPAD &&
@@ -207,10 +235,26 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
             state->color.held = true;
         }
 
-        if (item == TOUCH_FILTER && state->itemIdx < inventoryNumFilters(inv)) {
-            presses->filters[state->itemIdx] = !presses->filters[state->itemIdx];
-            updateFilteredIndices(inv, presses->filters);
-        } else if (item == TOUCH_FILTER_TAG && state->itemIdx < inventoryNumFilters(inv)) {
+//        if (item == TOUCH_TAG && state->itemIdx < inv->numTags) {
+//
+//        }
+        if (*screen == SCREEN_TAGS) {
+            if (item == TOUCH_FILTER && state->itemIdx < inv->numTags) {
+                if (!checkTagFilter(inv, getSelectedItem(inv), state->itemIdx + 1)) {
+                    const char *tag = inv->tags[state->itemIdx];
+                    addInventoryItemTags(inv, inv->selectedIdx, &tag, 1);
+                } else {
+                    removeInventoryItemTag(inv, inv->selectedIdx, state->itemIdx);
+                }
+            }
+        } else if (*screen == SCREEN_FILTER) {
+            if (item == TOUCH_FILTER && state->itemIdx < inventoryNumFilters(inv)) {
+                presses->filters[state->itemIdx] = !presses->filters[state->itemIdx];
+                updateFilteredIndices(inv, presses->filters);
+            }
+        }
+
+        if (item == TOUCH_FILTER_TAG && state->itemIdx < inventoryNumFilters(inv)) {
             presses->heldFilterTag = state->itemIdx;
         } else if (item == TOUCH_SORT) {
             if (inv->sortOrder != state->itemIdx) {
@@ -311,6 +355,20 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
             inventoryRename(inv, nameBuf);
         }
     } else if (item == TOUCH_TAGS) {
+        *screen = SCREEN_TAGS;
+    } else if (item == TOUCH_TAGS_ADD) {
+        char tagBuf[MAX_TAG_LEN] = "";
+
+        SwkbdState swkbd;
+        swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, MAX_TAG_LEN - 1);
+        swkbdSetHintText(&swkbd, "Enter new tag");
+        swkbdSetFilterCallback(&swkbd, validateSingleTagInput, NULL);
+
+        SwkbdButton button = swkbdInputText(&swkbd, tagBuf, MAX_TAG_LEN);
+        if (button == SWKBD_BUTTON_CONFIRM) {
+            addNewTag(inv, tagBuf);
+        }
+    } else if (item == TOUCH_TAGS_MANUAL) {
         static char tagBuf[MAX_TAG_LEN * MAX_ITEM_TAGS + 1] = " ";
         SwkbdState swkbd;
         swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, MAX_TAG_LEN * MAX_ITEM_TAGS - 1);
@@ -628,6 +686,10 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
         if (kDown & KEY_X) {
             *screen = SCREEN_DELETE;
         }
+    } else if (*screen == SCREEN_TAGS) {
+        if (kDown & KEY_B) {
+            *screen = SCREEN_EDIT;
+        }
     } else if (*screen == SCREEN_FILTER) {
         if (kDown & (KEY_R | KEY_B)) {
             *screen = SCREEN_VIEW;
@@ -657,12 +719,47 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
             *screen = SCREEN_FOLDER;
         }
     } else if (*screen == SCREEN_FOLDER) {
-        if (kDown & KEY_DDOWN) {
-            view->selectedIdx = (view->selectedIdx + 1) % view->currentFolder->numChildren;
-        }
-        if (kDown & KEY_DUP) {
-            view->selectedIdx =
-                    (view->selectedIdx + view->currentFolder->numChildren - 1) % view->currentFolder->numChildren;
+        if (display == DISPLAY_LIST) {
+            if (kDown & KEY_DDOWN) {
+                view->selectedIdx = (view->selectedIdx + 1) % view->currentFolder->numChildren;
+            }
+            if (kDown & KEY_DUP) {
+                view->selectedIdx =
+                        (view->selectedIdx + view->currentFolder->numChildren - 1) % view->currentFolder->numChildren;
+            }
+        } else {
+            if (kDown & KEY_DRIGHT) {
+                view->selectedIdx = (view->selectedIdx + 1) % view->currentFolder->numChildren;
+            }
+            if (kDown & KEY_DLEFT) {
+                view->selectedIdx =
+                        (view->selectedIdx + view->currentFolder->numChildren - 1) % view->currentFolder->numChildren;
+            }
+
+
+            int numRows = (view->currentFolder->numChildren + GRID_COLUMNS - 1) / GRID_COLUMNS;
+            int row = view->selectedIdx / GRID_COLUMNS, col = view->selectedIdx % GRID_COLUMNS;
+
+            if (kDown & KEY_DDOWN) {
+                if (row < numRows - 2) {
+                    view->selectedIdx += GRID_COLUMNS;
+                } else if (row == numRows - 2) {
+                    view->selectedIdx = MIN(view->selectedIdx + GRID_COLUMNS, view->currentFolder->numChildren - 1);
+                } else {
+                    view->selectedIdx = col;
+                }
+            }
+            if (kDown & KEY_DUP) {
+                if (row > 0) {
+                    view->selectedIdx -= GRID_COLUMNS;
+                } else {
+                    view->selectedIdx = MIN((numRows - 1) * GRID_COLUMNS + col, view->currentFolder->numChildren - 1);
+                }
+            }
+
+            if (kDown & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN)) {
+                updateGridScroll(gridScroll, inv, *screen);
+            }
         }
 
         // todo: should probably add proper scrolling for folder view
