@@ -4,6 +4,7 @@
 #include "layout.h"
 #include "render.h"
 #include "text.h"
+#include "camera.h"
 
 //#define CONSOLE 1
 //#define CONSOLE_TOP 1
@@ -1079,6 +1080,15 @@ void drawBatteryIndicator() {
 }
 
 // -----------------------------------------------------------------------------
+//void drawCamera(void) {
+////    C2D_DrawRectSolid(CAMERA_X - BORDER, CAMERA_Y - BORDER, 0.0f, CAMERA_WIDTH + 2 * BORDER, CAMERA_HEIGHT + 2 * BORDER, bgColor);
+//
+//    cameraDrawBuffer(gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL));
+//
+//    gfxFlushBuffers();
+//    gspWaitForVBlank();
+//    gfxSwapBuffers();
+//}
 
 static void
 drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, DisplayMode display, Scroll listScroll,
@@ -1120,8 +1130,15 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
 
         drawBatteryIndicator();
 
-        if (screen == SCREEN_DELETE || screen == SCREEN_DELETE_FOLDER) {
+        if (screen == SCREEN_DELETE || screen == SCREEN_DELETE_FOLDER || screen == SCREEN_CAMERA) {
             C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, TOP_WIDTH, SCREEN_HEIGHT, darkenScreen);
+        }
+
+        if (screen == SCREEN_CAMERA) {
+            C2D_DrawRectSolid(CAMERA_X - BORDER, 0, 0.0f, CAMERA_WIDTH + 2 * BORDER, SCREEN_HEIGHT, bgColor);
+
+//            C2D_Image img = cameraImage();
+//            C2D_DrawImageAt(img, CAMERA_X, CAMERA_Y, 0.0f, NULL, 1.0f, 1.0f);
         }
     }
 #endif

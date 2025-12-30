@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "layout.h"
 #include "render.h"
+#include "camera.h"
 
 void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float *filterScroll, bool hasQuery,
                       bool folderEmpty) {
@@ -569,7 +570,7 @@ void editItem(FolderView *view, Inventory *inv, Screen *screen, Item *item) {
 
 void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, FolderView *view, bool *optionScreen,
                      Scroll *listScroll,
-                     Scroll *gridScroll, ButtonPresses *presses, Screen prevScreen) {
+                     Scroll *gridScroll, ButtonPresses *presses, Screen *prevScreen) {
     u32 kDown = hidKeysDown();
     u32 kHeld = hidKeysHeld();
 
@@ -797,9 +798,17 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
     } else if (*screen == SCREEN_COLOR) {
         if (kDown & KEY_B) {
             view->currentFolder->color = view->oldColor;
-            *screen = prevScreen;
+            *screen = *prevScreen;
         } else if (kDown & KEY_A) {
-            *screen = prevScreen;
+            *screen = *prevScreen;
+        }
+    } else if (*screen == SCREEN_CAMERA) {
+        if (kDown & KEY_B) {
+            *screen = *prevScreen;
+            cameraStopStream();
+        }
+        if (kDown & KEY_A) {
+
         }
     }
 
@@ -813,6 +822,12 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
             Scroll *scroll = display == DISPLAY_LIST ? listScroll : gridScroll;
             scroll->offset -= circlePos.dy / 20.0f;
         }
+    }
+
+    if ((*screen == SCREEN_VIEW || *screen == SCREEN_EDIT) && display == DISPLAY_GRID && kDown & KEY_L) {
+        *prevScreen = *screen;
+        *screen = SCREEN_CAMERA;
+        cameraStartStream();
     }
 }
 
@@ -838,7 +853,9 @@ void updateUi(Screen *screen, DisplayMode *display, bool *optionScreen, TouchSta
               FolderView *view,
               Scroll *listScroll, Scroll *gridScroll, ButtonPresses *presses, Scroll *filterScroll) {
     updateTouchState(touchState, *screen, *optionScreen, &filterScroll->offset, hasQuery(inv), isFolderEmpty(view));
-    updateUiTouch(touchState, screen, display, optionScreen, inv, view, presses, listScroll, gridScroll, &filterScroll->offset);
-    updateUiButtons(screen, *display, inv, view, optionScreen, listScroll, gridScroll, presses, touchState->prevScreen);
+    updateUiTouch(touchState, screen, display, optionScreen, inv, view, presses, listScroll, gridScroll,
+                  &filterScroll->offset);
+    updateUiButtons(screen, *display, inv, view, optionScreen, listScroll, gridScroll, presses,
+                    &touchState->prevScreen);
     updateScroll(listScroll, gridScroll, inv, filterScroll);
 }

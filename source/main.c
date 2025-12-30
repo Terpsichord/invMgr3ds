@@ -8,15 +8,18 @@
 #include "file.h"
 #include "render.h"
 #include "folder.h"
+#include "camera.h"
 #include "main.h"
 
 void cleanup(void) {
     cleanupRender();
+    cleanupCamera();
 }
 
 int main() {
     srand(time(NULL));
 
+    initCamera();
     C3D_RenderTarget *top, *bottom;
     initRender(&top, &bottom);
     atexit(cleanup);

@@ -63,6 +63,7 @@ typedef enum {
     SCREEN_COLOR,
     SCREEN_FILTER_FOLDER,
     SCREEN_DELETE_FOLDER,
+    SCREEN_CAMERA,
 } Screen;
 
 typedef struct {
