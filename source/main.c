@@ -33,7 +33,7 @@ int main() {
     loadInventory(&inv, &folderView);
 
     Screen screen = SCREEN_FOLDER;
-    DisplayMode display = DISPLAY_LIST;
+    DisplayMode display = {0};
 
     TouchState touchState;
     ButtonPresses presses = {0, 0, 0, 0, -1, 0, {0}};

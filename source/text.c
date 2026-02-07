@@ -1,8 +1,8 @@
 #include "text.h"
 
-C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, folderHintText, emptyHintText, filterFolderHintText, gridOptionText, confirmationText,
-        deleteText, cancelText, confirmText, backText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, tagsAddText, tagsManualText, colorFolderText, outText, sortText, filterText,
-        searchText, emptyText, emptyRootText, takePhotoText, lButtonText, cameraText, commaText, quotesText, slashText, hashText, sortTexts[NUM_SORTS];
+C2D_Text nameText, qtyText, tagsText, descText, viewHintText, editHintText, filterHintText, zoomHintText, folderHintText, emptyHintText, filterFolderHintText, gridOptionText, zoomedOptionText, confirmationText,
+        deleteText, cancelText, confirmText, backText, renameText, editTagsText, editDescText, newFolderText, deleteFolderText, tagsAddText, tagsManualText, colorFolderText, gridFolderText, outText, sortText, filterText,
+        searchText, emptyText, emptyRootText, takePhotoText, lButtonText, cameraHintText, recipesText, restockText, commaText, quotesText, slashText, hashText, sortTexts[NUM_SORTS];
 static C2D_TextBuf staticTextBuf;
 
 static void addText(C2D_Text *text, const char *str) {
@@ -20,10 +20,12 @@ void initText(void) {
     addText(&viewHintText, "\uE000 Edit | \uE002 Copy | \uE003 Add | \uE005 Filter | \uE001 Back");
     addText(&editHintText, "\uE07D Adjust quantity | \uE002 Delete | \uE000/\uE001 Back");
     addText(&filterHintText, "\uE07D Change sort order | \uE005/\uE001 Back");
+    addText(&zoomHintText, "\uE000 Edit | \uE004 Previous | \uE005 Next | \uE001 Back");
     addText(&folderHintText, "\uE000 Open folder | \uE005 Filter items | \uE001 Back");
     addText(&emptyHintText, "\uE003 Add new item | \uE001 Back");
     addText(&filterFolderHintText, "\uE000 Edit item | \uE005/\uE001 Back");
     addText(&gridOptionText, "Enable grid view");
+    addText(&zoomedOptionText, "Enable zoomed view");
     addText(&confirmationText, "Are you sure you want to delete\nthis item?");
     addText(&deleteText, "\uE002 Delete");
     addText(&cancelText, "\uE001 Cancel");
@@ -37,6 +39,7 @@ void initText(void) {
     addText(&tagsAddText, "Add new tag");
     addText(&tagsManualText, "Edit tags manually");
     addText(&colorFolderText, "Edit color");
+    addText(&gridFolderText, "Always grid");
     addText(&outText, "Out of stock");
     addText(&sortText, "Sort by");
     addText(&filterText, "Filter by");
@@ -45,7 +48,9 @@ void initText(void) {
     addText(&emptyRootText, "Try getting started by adding a folder");
     addText(&takePhotoText, "Take photo");
     addText(&lButtonText, "\uE004");
-    addText(&cameraText, "\uE01E");
+    addText(&cameraHintText, "\uE000 Take Photo");
+    addText(&restockText, "★ RESTOCK");
+    addText(&recipesText, "★ RECIPES");
     addText(&commaText, ",");
     addText(&quotesText, "\"");
     addText(&slashText, "/");

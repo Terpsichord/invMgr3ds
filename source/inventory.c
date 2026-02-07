@@ -353,6 +353,7 @@ int addInventoryItem(Inventory *inv, const char *name, const char *desc, int qua
 
     Item item = {
             .quantity = quantity,
+            .hasImage = false,
             .numTags = 0,
             .numFolders = numFolders,
     };

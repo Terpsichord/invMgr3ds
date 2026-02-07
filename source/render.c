@@ -196,7 +196,11 @@ void drawItemGrid(const Inventory *inv, const FolderView *view, float scrollOffs
             C2D_DrawRectSolid(GRID_HPAD + GRID_SPACING * j, GRID_VPAD + GRID_SPACING * i - scrollOffset, 0.0f,
                               GRID_TILE_SIZE, GRID_TILE_SIZE, accent);
 
-            if (true) { // todo: if has no image
+            if (getItem(inv, idx)->hasImage) {
+                float scale = GRID_TILE_SIZE / CAMERA_WIDTH;
+                C2D_DrawImageAt(getItem(inv, idx)->image, GRID_HPAD + GRID_SPACING * j,
+                                GRID_VPAD + GRID_SPACING * i - scrollOffset, 0.0f, NULL, scale, scale);
+            } else {
                 if (inv->selectedIdx == idx) {
                     C2D_DrawText(&lButtonText, C2D_WithColor | C2D_AlignCenter,
                                  GRID_HPAD + GRID_SPACING * j + GRID_TILE_SIZE / 2,
@@ -243,6 +247,12 @@ void drawItemGrid(const Inventory *inv, const FolderView *view, float scrollOffs
             }
         }
     }
+}
+
+void drawItemZoomed(const Inventory *inv) {
+    if (numShownItems(inv) == 0 || !getItem(inv, inv->selectedIdx)->hasImage) return;
+
+    C2D_DrawImageAt(getItem(inv, inv->selectedIdx)->image, CAMERA_X, CAMERA_Y, 0.0f, NULL, 1.0f, 1.0f);
 }
 
 static void drawQuantity(const Item *item, const TouchState *touchState) {
@@ -494,7 +504,8 @@ void drawTagsView(const Inventory *inv, const TouchState *touchState, ButtonPres
     C2D_DrawRectSolid(VIEW_HPAD + BORDER + TEXT_HPAD, VIEW_TOP_PAD, 0.0f, w + 2 * TEXT_HPAD, h + 2 * TEXT_VPAD,
                       bgColor);
 
-    C2D_DrawText(&getSelectedItem(inv)->nameText, 0, VIEW_HPAD + BORDER + 2 * TEXT_HPAD, VIEW_TOP_PAD, 0.0f, 0.6f, 0.6f);
+    C2D_DrawText(&getSelectedItem(inv)->nameText, 0, VIEW_HPAD + BORDER + 2 * TEXT_HPAD, VIEW_TOP_PAD, 0.0f, 0.6f,
+                 0.6f);
 
     // covers
     C2D_DrawRectSolid(VIEW_HPAD + BORDER + 3 * TEXT_HPAD + w, VIEW_TOP_PAD + VIEW_VPAD, 0.0f,
@@ -506,9 +517,11 @@ void drawTagsView(const Inventory *inv, const TouchState *touchState, ButtonPres
                       accent);
     C2D_DrawRectSolid(BOTTOM_WIDTH - VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD, 0.0f, BOTTOM_WIDTH, SCREEN_HEIGHT,
                       bgColor);
-    C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT - BORDER, 0.0f, BOTTOM_WIDTH - 2 * VIEW_HPAD, BORDER,
+    C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT - BORDER, 0.0f,
+                      BOTTOM_WIDTH - 2 * VIEW_HPAD, BORDER,
                       accent);
-    C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT, 0.0f, BOTTOM_WIDTH - 2 * VIEW_HPAD, SCREEN_HEIGHT,
+    C2D_DrawRectSolid(VIEW_HPAD, VIEW_TOP_PAD + VIEW_VPAD + BOX_AREA_HEIGHT, 0.0f, BOTTOM_WIDTH - 2 * VIEW_HPAD,
+                      SCREEN_HEIGHT,
                       bgColor);
 
     float btnWidth = RENAME_FOLDER_X - NEW_FOLDER_X + FOLDER_BTN_WIDTH;
@@ -777,12 +790,12 @@ void drawHeaders(u32 bgColor) {
     C2D_DrawText(&descText, 0, NAME_WIDTH + QUANTITY_WIDTH + TAG_WIDTH + TEXT_HPAD, TEXT_VPAD, 0.0f, 0.5f, 0.5f);
 }
 
-void drawHintText(Screen screen, bool folderEmpty) {
+void drawHintText(Screen screen, bool folderEmpty, bool zoomed) {
     C2D_Text *text = NULL;
 
     switch (screen) {
         case SCREEN_VIEW:
-            text = &viewHintText;
+            text = zoomed ? &zoomHintText : &viewHintText;
             break;
         case SCREEN_EDIT:
         case SCREEN_DELETE:
@@ -899,14 +912,20 @@ void drawEmptyFolderButtons(const TouchState *touchState) {
                  0.0f, 0.5f, 0.5f, touchState->item == TOUCH_COLOR_FOLDER ? white : black);
 }
 
-void drawViewButton(const TouchState *touchState) {
-    float width = DELETE_X - NEW_FOLDER_X + FOLDER_BTN_WIDTH;
+void drawViewButtons(const TouchState *touchState, const Folder *folder) {
+    float width = 2 * FOLDER_BTN_WIDTH + BORDER;
+
     C2D_DrawRectSolid(NEW_FOLDER_X, ROW_BTN_Y, 0.0f, width, ROW_BTN_HEIGHT,
                       touchState->item == TOUCH_COLOR_FOLDER ? darkGray : accent);
-
     C2D_DrawText(&colorFolderText, C2D_AlignCenter | C2D_WithColor, NEW_FOLDER_X + width / 2,
                  ROW_BTN_Y + 2 * TEXT_VPAD,
                  0.0f, 0.5f, 0.5f, touchState->item == TOUCH_COLOR_FOLDER ? white : black);
+
+    C2D_DrawRectSolid(COLOR_FOLDER_X, ROW_BTN_Y, 0.0f, width, ROW_BTN_HEIGHT,
+                      folder->alwaysGrid ? darkGray : accent);
+    C2D_DrawText(&gridFolderText, C2D_AlignCenter | C2D_WithColor, COLOR_FOLDER_X + width / 2,
+                 ROW_BTN_Y + 2 * TEXT_VPAD,
+                 0.0f, 0.5f, 0.5f, folder->alwaysGrid ? white : black);
 }
 
 u32 hsvToRgb(float h, float s, float v) {
@@ -1024,18 +1043,32 @@ void drawColorView(const TouchState *touchState) {
     C2D_DrawText(&confirmText, C2D_AlignCenter, COLOR_CONFIRM_X, COLOR_OPT_Y, 0.0f, 0.5f, 0.5f, black);
 }
 
+void drawCameraView(void) {
+    C2D_DrawText(&backText, 0, TEXT_HPAD, TEXT_VPAD, 0.0f, 0.5f, 0.5f);
+    C2D_DrawText(&cameraHintText, C2D_AlignCenter, BOTTOM_WIDTH / 2, SCREEN_HEIGHT / 2, 0.0f, 0.7f, 0.7f, black);
+}
+
 void drawOptionsView(DisplayMode display) {
     C2D_DrawText(&backText, 0, TEXT_HPAD, TEXT_VPAD, 0.0f, 0.5f, 0.5f);
     C2D_DrawRectSolid(0, 2 * TEXT_VPAD + 15.0f, 0.0f, BOTTOM_WIDTH, 1.0f, black);
 
     C2D_DrawRectSolid(OPTIONS_HPAD, OPTIONS_VPAD, 0.0f, OPTION_BOX_SIZE, OPTION_BOX_SIZE, black);
-    if (display == DISPLAY_LIST) {
+    if (!display.isGrid) {
         C2D_DrawRectSolid(OPTIONS_HPAD + 2.0f, OPTIONS_VPAD + 2.0f, 0.0f, OPTION_BOX_SIZE - 4.0f,
                           OPTION_BOX_SIZE - 4.0f, bgColor);
     }
+    C2D_DrawRectSolid(OPTIONS_HPAD, ZOOMED_Y, 0.0f, OPTION_BOX_SIZE, OPTION_BOX_SIZE, black);
+    if (!display.isZoom) {
+        C2D_DrawRectSolid(OPTIONS_HPAD + 2.0f, ZOOMED_Y + 2.0f, 0.0f, OPTION_BOX_SIZE - 4.0f,
+                          OPTION_BOX_SIZE - 4.0f, bgColor);
+    }
+
 
     C2D_DrawText(&gridOptionText, 0, OPTIONS_HPAD + OPTION_BOX_SIZE + OPTION_TEXT_PAD,
                  OPTIONS_VPAD + OPTION_BOX_SIZE / 2 - 10.0f, 0.0f, 0.6f, 0.6f, black);
+
+    C2D_DrawText(&zoomedOptionText, 0, OPTIONS_HPAD + OPTION_BOX_SIZE + OPTION_TEXT_PAD,
+                 ZOOMED_Y + OPTION_BOX_SIZE / 2 - 10.0f, 0.0f, 0.6f, 0.6f, black);
 }
 
 void drawScrollBar(Scroll scroll, float width, float maxHeight, float heightPortion, float x, float y) {
@@ -1080,15 +1113,13 @@ void drawBatteryIndicator() {
 }
 
 // -----------------------------------------------------------------------------
-//void drawCamera(void) {
-////    C2D_DrawRectSolid(CAMERA_X - BORDER, CAMERA_Y - BORDER, 0.0f, CAMERA_WIDTH + 2 * BORDER, CAMERA_HEIGHT + 2 * BORDER, bgColor);
-//
-//    cameraDrawBuffer(gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL));
-//
-//    gfxFlushBuffers();
-//    gspWaitForVBlank();
-//    gfxSwapBuffers();
-//}
+void drawCamera(void) {
+    cameraDrawBuffer(gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL));
+
+    gfxFlushBuffers();
+    gspWaitForVBlank();
+    gfxSwapBuffers();
+}
 
 static void
 drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, DisplayMode display, Scroll listScroll,
@@ -1100,13 +1131,22 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
     {
         if (screen == SCREEN_FOLDER || screen == SCREEN_DELETE_FOLDER ||
             (screen == SCREEN_COLOR && touchState->prevScreen == SCREEN_FOLDER)) {
-            if (display == DISPLAY_LIST) {
-                drawFolderList(view/*, scroll.offset*/);
-            } else {
+            if (isGrid(view->currentFolder, display)) {
                 drawFolderGrid(view, gridScroll.offset);
+            } else {
+                drawFolderList(view/*, scroll.offset*/);
             }
         } else {
-            if (display == DISPLAY_LIST) {
+            if (display.isZoom) {
+                drawItemZoomed(inv);
+            } else if (isGrid(view->currentFolder, display)) {
+                drawItemGrid(inv, view, gridScroll.offset);
+                if (gridScroll.max > 0) {
+                    drawScrollBar(gridScroll, TOP_WIDTH,
+                                  SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD - showFilterBar(inv, screen) * BAR_HEIGHT,
+                                  SCREEN_HEIGHT - GRID_VPAD, 0.0f, GRID_VPAD);
+                }
+            } else {
                 drawItemList(inv, view, listScroll.offset);
                 drawHeaders(bgColor);
                 if (listScroll.max > 0) {
@@ -1115,30 +1155,15 @@ drawTopScreen(C3D_RenderTarget *top, const Inventory *inv, Screen screen, Displa
                                   SCREEN_HEIGHT - INV_TOP_PAD - showFilterBar(inv, screen) * BAR_HEIGHT, 0.0f,
                                   INV_TOP_PAD + TEXT_VPAD);
                 }
-            } else {
-                drawItemGrid(inv, view, gridScroll.offset);
-                if (gridScroll.max > 0) {
-                    drawScrollBar(gridScroll, TOP_WIDTH,
-                                  SCREEN_HEIGHT - GRID_VPAD - 2 * TEXT_VPAD - showFilterBar(inv, screen) * BAR_HEIGHT,
-                                  SCREEN_HEIGHT - GRID_VPAD, 0.0f, GRID_VPAD);
-                }
             }
         }
 
+        drawBatteryIndicator();
 
         drawFilterBar(inv, screen);
 
-        drawBatteryIndicator();
-
         if (screen == SCREEN_DELETE || screen == SCREEN_DELETE_FOLDER || screen == SCREEN_CAMERA) {
             C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, TOP_WIDTH, SCREEN_HEIGHT, darkenScreen);
-        }
-
-        if (screen == SCREEN_CAMERA) {
-            C2D_DrawRectSolid(CAMERA_X - BORDER, 0, 0.0f, CAMERA_WIDTH + 2 * BORDER, SCREEN_HEIGHT, bgColor);
-
-//            C2D_Image img = cameraImage();
-//            C2D_DrawImageAt(img, CAMERA_X, CAMERA_Y, 0.0f, NULL, 1.0f, 1.0f);
         }
     }
 #endif
@@ -1197,16 +1222,19 @@ void drawBottomScreen(C3D_RenderTarget *bottom, const Inventory *inv, Screen scr
             case SCREEN_COLOR:
                 drawColorView(touchState);
                 return;
+            case SCREEN_CAMERA:
+                drawCameraView();
+                return;
             default:
                 return;
         }
 
         if (screen == SCREEN_VIEW) {
-            drawViewButton(&state);
+            drawViewButtons(&state, view->currentFolder);
         }
 
         if (!isEmptyRoot(view)) {
-            drawHintText(screen, isFolderEmpty(view));
+            drawHintText(screen, isFolderEmpty(view), display.isZoom);
         }
 
         if (screen == SCREEN_EDIT || screen == SCREEN_DELETE) {
@@ -1245,8 +1273,23 @@ render(C3D_RenderTarget *top, C3D_RenderTarget *bottom, const Inventory *inv, Sc
 
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
-    drawTopScreen(top, inv, screen, display, listScroll, gridScroll, folderView, touchState);
-    drawBottomScreen(bottom, inv, screen, display, optionScreen, touchState, filterScroll, presses, folderView);
+    static int cameraHelpDrawn = 0;
+
+    if (screen == SCREEN_CAMERA) {
+        // must be drawn twice to be on both framebuffers
+        if (cameraHelpDrawn < 2) {
+            drawTopScreen(top, inv, screen, display, listScroll, gridScroll, folderView, touchState);
+            drawBottomScreen(bottom, inv, screen, display, optionScreen, touchState, filterScroll, presses, folderView);
+            cameraHelpDrawn++;
+        } else {
+            cameraUpdate();
+            drawCamera();
+        }
+    } else {
+        drawTopScreen(top, inv, screen, display, listScroll, gridScroll, folderView, touchState);
+        drawBottomScreen(bottom, inv, screen, display, optionScreen, touchState, filterScroll, presses, folderView);
+        cameraHelpDrawn = 0;
+    }
 
     C3D_FrameEnd(0);
 }

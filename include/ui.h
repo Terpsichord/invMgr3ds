@@ -20,6 +20,7 @@ typedef enum {
     TOUCH_QTY,
     TOUCH_BURGER,
     TOUCH_GRID_OPTION,
+    TOUCH_ZOOMED_OPTION,
     TOUCH_RENAME,
     TOUCH_TAGS,
     TOUCH_TAGS_ADD,
@@ -37,6 +38,7 @@ typedef enum {
     TOUCH_RENAME_FOLDER,
     TOUCH_COLOR_FOLDER,
     TOUCH_DELETE_FOLDER,
+    TOUCH_GRID_FOLDER,
 } TouchItem;
 
 typedef enum {
@@ -74,14 +76,16 @@ typedef struct {
     int itemIdx;
     // only valid if screen is SCREEN_COLOR
     ColorState color;
-    // only valid if screen is SCREEN_COLOR
+    // only valid if screen is SCREEN_COLOR or SCREEN_OPTIONS
     Screen prevScreen;
 } TouchState;
 
-typedef enum {
-    DISPLAY_LIST,
-    DISPLAY_GRID,
+typedef struct {
+    bool isGrid;
+    bool isZoom;
 } DisplayMode;
+
+bool isGrid(const Folder *folder, DisplayMode display);
 
 typedef struct {
     int incrFrames;

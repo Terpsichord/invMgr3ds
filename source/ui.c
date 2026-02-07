@@ -49,14 +49,20 @@ void updateTouchState(TouchState *state, Screen screen, bool optionScreen, float
                 if (touchPos.py >= OPTIONS_VPAD && touchPos.py < OPTIONS_VPAD + OPTION_BOX_SIZE) {
                     state->item = TOUCH_GRID_OPTION;
                 }
+                if (touchPos.py >= ZOOMED_Y && touchPos.py < ZOOMED_Y + OPTION_BOX_SIZE) {
+                    state->item = TOUCH_ZOOMED_OPTION;
+                }
             }
             return;
         }
         if (screen == SCREEN_VIEW) {
-            if (touchPos.px >= NEW_FOLDER_X && touchPos.px < DELETE_FOLDER_X + FOLDER_BTN_WIDTH
-                && touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT) {
-                state->prevScreen = screen;
-                state->item = TOUCH_COLOR_FOLDER;
+            if (touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT)  {
+                if (touchPos.px >= NEW_FOLDER_X && touchPos.px < RENAME_FOLDER_X + FOLDER_BTN_WIDTH) {
+                    state->prevScreen = screen;
+                    state->item = TOUCH_COLOR_FOLDER;
+                } else if (touchPos.px >= COLOR_FOLDER_X && touchPos.px < DELETE_FOLDER_X + FOLDER_BTN_WIDTH) {
+                    state->item = TOUCH_GRID_FOLDER;
+                }
             }
         } else if (screen == SCREEN_EDIT) {
             if (touchPos.py >= ROW_BTN_Y && touchPos.py < ROW_BTN_Y + ROW_BTN_HEIGHT) {
@@ -221,6 +227,10 @@ static void updateGridScroll(Scroll *gridScroll, Inventory *inv, Screen screen) 
                              showFilterBar(inv, screen) * BAR_HEIGHT);
 }
 
+bool isGrid(const Folder *folder, DisplayMode display) {
+    return folder->alwaysGrid || display.isGrid;
+}
+
 void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool *optionScreen, Inventory *inv,
                    FolderView *view, ButtonPresses *presses,
                    Scroll *listScroll, Scroll *gridScroll, float *filterScroll) {
@@ -248,7 +258,7 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
                     removeInventoryItemTag(inv, inv->selectedIdx, state->itemIdx);
                 }
             }
-        } else if (*screen == SCREEN_FILTER) {
+        } else if (*screen == SCREEN_FILTER || *screen == SCREEN_FILTER_FOLDER) {
             if (item == TOUCH_FILTER && state->itemIdx < inventoryNumFilters(inv)) {
                 presses->filters[state->itemIdx] = !presses->filters[state->itemIdx];
                 updateFilteredIndices(inv, presses->filters);
@@ -276,12 +286,18 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
         } else if (item == TOUCH_SEARCH_CLEAR) {
             inventorySearch(inv, "");
         } else if (item == TOUCH_GRID_OPTION) {
-            if (*display == DISPLAY_LIST) {
-                *display = DISPLAY_GRID;
-                updateGridScroll(gridScroll, inv, *screen);
-            } else {
-                *display = DISPLAY_LIST;
+            if (display->isGrid) {
+                display->isGrid = false;
                 updateListScroll(listScroll, inv, *screen);
+            } else {
+                display->isGrid = true;
+                updateGridScroll(gridScroll, inv, *screen);
+            }
+        } else if (item == TOUCH_ZOOMED_OPTION) {
+            if (display->isZoom) {
+                display->isZoom = false;
+            } else {
+                display->isZoom = true;
             }
         }
     } else if (state->stage == STAGE_HELD) {
@@ -460,7 +476,7 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
 
         if (button == SWKBD_BUTTON_CONFIRM) {
             if (item == TOUCH_NEW_FOLDER) {
-                newFolder(nameBuf, view->currentFolder, NULL, view->textBuf);
+                newFolder(nameBuf, view->currentFolder, NULL, false, view->textBuf);
             } else {
                 strncpy(getSelectedFolder(view)->name, nameBuf, MAX_FOLDER_LEN - 1);
                 updateFolderViewText(view);
@@ -482,6 +498,8 @@ void updateUiTouch(TouchState *state, Screen *screen, DisplayMode *display, bool
         view->oldColor = view->currentFolder->color;
         rgbToHsv(view->oldColor, &state->color.hue, &state->color.saturation, &state->color.value);
         *screen = SCREEN_COLOR;
+    } else if (item == TOUCH_GRID_FOLDER) {
+        view->currentFolder->alwaysGrid = !view->currentFolder->alwaysGrid;
     }
 }
 
@@ -560,8 +578,9 @@ void editItem(FolderView *view, Inventory *inv, Screen *screen, Item *item) {
     inventorySetFolderFilter(inv, view->currentFolder);
 
     for (int i = 0; i < inv->numFiltered; i++) {
-        if (itemsEqual(&inv->items[i], item)) {
+        if (itemsEqual(getItem(inv, i), item)) {
             inv->selectedIdx = i;
+            break;
         }
     }
     *screen = SCREEN_EDIT;
@@ -583,18 +602,14 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
 
     if (*screen == SCREEN_VIEW || *screen == SCREEN_FILTER_FOLDER) {
         if (numShownItems(inv) > 0) {
-            if (display == DISPLAY_LIST) {
-                if (kDown & KEY_DDOWN) {
+            if (display.isZoom) {
+                if (kDown & KEY_R) {
                     inv->selectedIdx = (inv->selectedIdx + 1) % numShownItems(inv);
                 }
-                if (kDown & KEY_DUP) {
+                if (kDown & KEY_L) {
                     inv->selectedIdx = (inv->selectedIdx + numShownItems(inv) - 1) % numShownItems(inv);
                 }
-
-                if (kDown & (KEY_DUP | KEY_DDOWN)) {
-                    updateListScroll(listScroll, inv, *screen);
-                }
-            } else if (display == DISPLAY_GRID) {
+            } else if (isGrid(view->currentFolder, display)) {
                 if (kDown & KEY_DRIGHT) {
                     inv->selectedIdx = (inv->selectedIdx + 1) % numShownItems(inv);
                 }
@@ -625,40 +640,51 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
                 if (kDown & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN)) {
                     updateGridScroll(gridScroll, inv, *screen);
                 }
+            } else {
+                if (kDown & KEY_DDOWN) {
+                    inv->selectedIdx = (inv->selectedIdx + 1) % numShownItems(inv);
+                }
+                if (kDown & KEY_DUP) {
+                    inv->selectedIdx = (inv->selectedIdx + numShownItems(inv) - 1) % numShownItems(inv);
+                }
+                if (kDown & (KEY_DUP | KEY_DDOWN)) {
+                    updateListScroll(listScroll, inv, *screen);
+                }
             }
-
 
             if (*screen == SCREEN_VIEW && kDown & KEY_A) {
                 *screen = SCREEN_EDIT;
             }
         }
         if (*screen == SCREEN_VIEW) {
-            if (kDown & KEY_R) {
-                *screen = SCREEN_FILTER;
-            }
-            if (kDown & KEY_X) {
-                int prevIdx = inv->selectedIdx;
-                SwkbdButton button = addItem(inv, view->currentFolder);
-                if (button != SWKBD_BUTTON_LEFT) {
-                    inventorySetQuantity(inv, getItem(inv, prevIdx)->quantity);
+            if (!display.isZoom) {
+                if (kDown & KEY_R) {
+                    *screen = SCREEN_FILTER;
+                }
+                if (kDown & KEY_X) {
+                    int prevIdx = inv->selectedIdx;
+                    SwkbdButton button = addItem(inv, view->currentFolder);
+                    if (button != SWKBD_BUTTON_LEFT) {
+                        inventorySetQuantity(inv, getItem(inv, prevIdx)->quantity);
 
-                    getSelectedItem(inv)->numTags = getItem(inv, prevIdx)->numTags;
-                    for (int i = 0; i < getItem(inv, prevIdx)->numTags; i++) {
-                        strncpy(getSelectedItem(inv)->tags[i], getItem(inv, prevIdx)->tags[i], MAX_TAG_LEN - 1);
-                    }
-                    if (getSelectedItem(inv)->desc[0] == '\0') {
-                        strncpy(getSelectedItem(inv)->desc, getItem(inv, prevIdx)->desc, MAX_ITEM_LEN - 1);
-                    }
-                    refreshItemTags(inv, getSelectedItem(inv));
+                        getSelectedItem(inv)->numTags = getItem(inv, prevIdx)->numTags;
+                        for (int i = 0; i < getItem(inv, prevIdx)->numTags; i++) {
+                            strncpy(getSelectedItem(inv)->tags[i], getItem(inv, prevIdx)->tags[i], MAX_TAG_LEN - 1);
+                        }
+                        if (getSelectedItem(inv)->desc[0] == '\0') {
+                            strncpy(getSelectedItem(inv)->desc, getItem(inv, prevIdx)->desc, MAX_ITEM_LEN - 1);
+                        }
+                        refreshItemTags(inv, getSelectedItem(inv));
 
+                        updateListScroll(listScroll, inv, *screen);
+                        updateGridScroll(gridScroll, inv, *screen);
+                    }
+                }
+                if (kDown & KEY_Y) {
+                    addItem(inv, view->currentFolder);
                     updateListScroll(listScroll, inv, *screen);
                     updateGridScroll(gridScroll, inv, *screen);
                 }
-            }
-            if (kDown & KEY_Y) {
-                addItem(inv, view->currentFolder);
-                updateListScroll(listScroll, inv, *screen);
-                updateGridScroll(gridScroll, inv, *screen);
             }
             if (kDown & KEY_B) {
                 folderViewNavigateParent(view);
@@ -720,7 +746,7 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
             *screen = SCREEN_FOLDER;
         }
     } else if (*screen == SCREEN_FOLDER) {
-        if (display == DISPLAY_LIST) {
+        if (!isGrid(view->currentFolder, display)) {
             if (kDown & KEY_DDOWN) {
                 view->selectedIdx = (view->selectedIdx + 1) % view->currentFolder->numChildren;
             }
@@ -808,7 +834,8 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
             cameraStopStream();
         }
         if (kDown & KEY_A) {
-
+            cameraSaveImage(getSelectedItem(inv));
+            *screen = *prevScreen;
         }
     }
 
@@ -819,12 +846,12 @@ void updateUiButtons(Screen *screen, DisplayMode display, Inventory *inv, Folder
             hidCircleRead(&circlePos);
 
 
-            Scroll *scroll = display == DISPLAY_LIST ? listScroll : gridScroll;
+            Scroll *scroll = isGrid(view->currentFolder, display) ? gridScroll : listScroll;
             scroll->offset -= circlePos.dy / 20.0f;
         }
     }
 
-    if ((*screen == SCREEN_VIEW || *screen == SCREEN_EDIT) && display == DISPLAY_GRID && kDown & KEY_L) {
+    if ((*screen == SCREEN_VIEW || *screen == SCREEN_EDIT) && isGrid(view->currentFolder, display) && !display.isZoom && kDown & KEY_L) {
         *prevScreen = *screen;
         *screen = SCREEN_CAMERA;
         cameraStartStream();

@@ -127,3 +127,4 @@
 #define OPTIONS_VPAD     50.0f
 #define OPTION_TEXT_PAD  15.0f
 #define OPTION_BOX_SIZE  25.0f
+#define ZOOMED_Y        ((OPTIONS_VPAD) + (OPTION_BOX_SIZE) + (OPTION_TEXT_PAD))

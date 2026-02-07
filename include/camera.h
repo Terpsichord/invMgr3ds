@@ -2,6 +2,7 @@
 #include "citro2d.h"
 
 #include "main.h"
+#include "inventory.h"
 
 #define CAMERA_WIDTH    240
 #define CAMERA_HEIGHT   240
@@ -18,5 +19,7 @@ void cameraStartStream(void);
 void cameraStopStream(void);
 
 bool cameraUpdate(void);
+void cameraDrawBuffer(void *fb);
 
-C2D_Image cameraImage();
+void cameraSaveImage(Item *item);
+C2D_Image cameraGetImage(u32 *rgba_raw);

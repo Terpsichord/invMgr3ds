@@ -24,7 +24,7 @@ void freeFolderView(FolderView *view) {
     C2D_TextBufDelete(view->textBuf);
 }
 
-Folder *newFolder(const char *name, Folder *parent, const u32 *color, C2D_TextBuf textBuf) {
+Folder *newFolder(const char *name, Folder *parent, const u32 *color, bool alwaysGrid, C2D_TextBuf textBuf) {
     if (parent->numChildren >= MAX_FOLDERS) return NULL;
 
     Folder *folder = calloc(1, sizeof(Folder));
@@ -35,6 +35,7 @@ Folder *newFolder(const char *name, Folder *parent, const u32 *color, C2D_TextBu
     C2D_TextOptimize(&folder->text);
 
     folder->color = color != NULL ? *color : folderColors[rand() % NUM_FOLDER_COLORS];
+    folder->alwaysGrid = alwaysGrid;
     folder->parent = parent;
     parent->children[parent->numChildren++] = folder;
 
@@ -97,7 +98,7 @@ Folder *findFolder(Folder *root, const char *name) {
 Folder *findOrMakeFolder(FolderView *view, const char *name, Folder *parent) {
     Folder *folder = findFolder(view->rootFolder, name);
     if (folder == NULL) {
-        folder = newFolder(name, parent, NULL, view->textBuf);
+        folder = newFolder(name, parent, NULL, false, view->textBuf);
         sortFolders(parent);
     }
     return folder;

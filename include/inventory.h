@@ -18,6 +18,9 @@ typedef struct {
     char name[MAX_ITEM_LEN];
     C2D_Text nameText;
 
+    C2D_Image image;
+    bool hasImage;
+
     int quantity;
     C2D_Text qtyText;
 

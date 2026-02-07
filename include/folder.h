@@ -15,6 +15,7 @@ typedef struct Folder {
     char name[MAX_FOLDER_LEN];
     C2D_Text text;
     u32 color;
+    bool alwaysGrid;
 
     struct Folder *parent;
     struct Folder *children[MAX_FOLDERS];
@@ -29,7 +30,7 @@ typedef struct {
     C2D_TextBuf textBuf;
 } FolderView;
 
-Folder *newFolder(const char *name, Folder *parent, const u32 *color, C2D_TextBuf textBuf);
+Folder *newFolder(const char *name, Folder *parent, const u32 *color, bool alwaysGrid, C2D_TextBuf textBuf);
 void freeFolder(Folder *folder);
 
 void initFolderView(FolderView *view);
