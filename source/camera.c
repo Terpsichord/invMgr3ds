@@ -5,6 +5,7 @@
 
 #include "camera.h"
 #include "file.h"
+#include "render.h"
 
 typedef enum {
     EVENT_INTERRUPT,
@@ -15,6 +16,8 @@ static u8 *cameraBuffer = NULL;
 static Handle receiveEvents[2] = {0};
 static bool captureInterrupted = false;
 static u32 bufSize = 0;
+
+static float cameraBrightness = 10.0f;
 
 void initCamera(void) {
     camInit();
@@ -81,6 +84,16 @@ bool cameraUpdate(void) {
     return true;
 }
 
+u32 adjustBrightness(u32 rgb) {
+    float h, s, v;
+    rgbToHsv(rgb, &h, &s, &v);
+
+    v = fmaxf(1.0f, v * cameraBrightness);
+
+    return hsvToRgb(h, s, v);
+}
+
+
 static void writePictureToFramebufferRGB565(void *fb, void *img, u16 x, u16 y, u16 width, u16 height) {
     u8 *fb_8 = (u8 *) fb;
     u16 *img_16 = (u16 *) img;
@@ -91,9 +104,18 @@ static void writePictureToFramebufferRGB565(void *fb, void *img, u16 x, u16 y, u
             draw_x = x + i;
             u32 v = (draw_y + draw_x * height) * 3;
             u16 data = img_16[j * width + i];
+
             uint8_t b = ((data >> 11) & 0x1F) << 3;
             uint8_t g = ((data >> 5) & 0x3F) << 2;
             uint8_t r = (data & 0x1F) << 3;
+
+            u32 rgb = C2D_Color32(r, g, b, 0xFF);
+            u32 brightRgb = adjustBrightness(rgb);
+
+            r = (brightRgb) & 0xFF;
+            g = (brightRgb >> 8) & 0xFF;
+            b = (brightRgb >> 16) & 0xFF;
+
             fb_8[v] = r;
             fb_8[v + 1] = g;
             fb_8[v + 2] = b;
@@ -104,7 +126,6 @@ static void writePictureToFramebufferRGB565(void *fb, void *img, u16 x, u16 y, u
 void cameraDrawBuffer(void *fb) {
     writePictureToFramebufferRGB565(fb, cameraBuffer, CAMERA_X, CAMERA_Y, CAMERA_WIDTH, CAMERA_HEIGHT);
 }
-
 
 const u32 next_pow2(u32 n) {
     n--;
